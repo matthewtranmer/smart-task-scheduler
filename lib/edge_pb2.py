@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nedge.proto\x12\x04\x65\x64ge\"2\n\x06Header\x12\x15\n\rmessageLength\x18\x01 \x01(\x05\x12\x11\n\tcommandID\x18\x02 \x01(\x05\"5\n\x04Task\x12\x0e\n\x06taskID\x18\x01 \x01(\x05\x12\r\n\x05input\x18\x02 \x01(\x0c\x12\x0e\n\x06output\x18\x03 \x01(\x0c\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nedge.proto\x12\x04\x65\x64ge\"2\n\x06Header\x12\x15\n\rmessageLength\x18\x01 \x01(\x05\x12\x11\n\tcommandID\x18\x02 \x01(\x05\"5\n\x04Task\x12\x0e\n\x06taskID\x18\x01 \x01(\x05\x12\r\n\x05input\x18\x02 \x01(\x0c\x12\x0e\n\x06output\x18\x03 \x01(\x0c\"(\n\x0cRegistration\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\"%\n\tHeartbeat\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\rb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'edge_pb2', globals())
@@ -24,4 +24,8 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _HEADER._serialized_end=70
   _TASK._serialized_start=72
   _TASK._serialized_end=125
+  _REGISTRATION._serialized_start=127
+  _REGISTRATION._serialized_end=167
+  _HEARTBEAT._serialized_start=169
+  _HEARTBEAT._serialized_end=206
 # @@protoc_insertion_point(module_scope)

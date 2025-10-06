@@ -11,3 +11,13 @@ message Task {
     bytes input = 2;
     bytes output = 3;
 }
+
+message Registration {
+    bytes IP = 1;
+    uint32 port = 2;
+}
+
+message Heartbeat {
+    bytes IP = 1;
+    uint32 port = 2;
+}
