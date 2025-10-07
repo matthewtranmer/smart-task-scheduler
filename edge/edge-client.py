@@ -8,7 +8,6 @@ server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind(("127.0.0.1", 0))
 
 ip, port = server.getsockname()
-
 server.listen()
 
 print(f"Edge client started on address {ip}:{port}")
@@ -57,7 +56,10 @@ def registerNode():
 def runTask(task: edge_pb2.Task):
     print(f"Running task with id {task.taskID} and input {task.input} on node {ip}:{port}")
 
-    response = str(random.randint(1, 256)).encode()
+    sleep_time = random.uniform(0, 1)
+    time.sleep(sleep_time)
+
+    response = str(sleep_time).encode()
     print(f"Response generated as: {response}")
 
     return response
@@ -94,6 +96,7 @@ def main():
 
     while True:
         sock, addr = server.accept()
+        sock.settimeout(2)
 
         handleRequest(sock, addr)
 

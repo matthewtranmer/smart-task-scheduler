@@ -48,16 +48,29 @@ def removeDeadClients():
 
 # Called when a task is submitted to the access server by a client.
 def scheduleTask(header, raw_payload):
-    scheduled_index = scheduler.schedule(edge_clients)
-    if (scheduled_index == -1):
-        return net.createResponse(False, "There are no avaiable clients to perform the task").SerializeToString()
+    for _ in range(100):
+        scheduled_index = scheduler.schedule(edge_clients)
+        if (scheduled_index == -1):
+            return net.createResponse(False, "There are no avaiable clients to perform the task").SerializeToString()
 
-    scheduled_node = edge_clients[scheduled_index]
+        scheduled_node = edge_clients[scheduled_index]
+        ip = scheduled_node["IP"]
+        port = scheduled_node["port"]
+        
+        logger.info(f"Scheduled task on node {scheduled_node}")
 
-    logger.info(f"Scheduled task on node {scheduled_node}")
+        edge_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    edge_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    edge_connection.connect((scheduled_node["IP"], scheduled_node["port"]))
+        try:
+            edge_connection.connect((ip, port))
+            break
+        except ConnectionRefusedError:
+            logger.warning(f"Node {ip}:{port} is not responding! Removing from registry")
+            # TODO: Unsafe - node could be removed by other routine checking for heartbeats
+            # during critical section
+            index = searchEdgeClients((ip, port))
+            if (index != -1):
+                edge_clients.pop(index)
 
     net.send(edge_connection, header, raw_payload)
     _, response = net.recv(edge_connection)
@@ -135,12 +148,14 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
+    logger.info("Starting access server")
     removeDeadClients()
 
     while True:
         sock, addr = server.accept()
+        sock.settimeout(2)
 
-        handleRequest(sock, addr)
+        threading.Thread(target=handleRequest, args=(sock, addr)).start()
 
 if __name__ == "__main__":
     main()
