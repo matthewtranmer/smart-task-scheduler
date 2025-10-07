@@ -1,7 +1,6 @@
 from lib import edge_pb2
-from enum import Enum
 
-class Commands(Enum):
+class Commands():
     SCHEDULE_TASK = 1
     HEARTBEAT = 2
     REGISTRATION = 3
@@ -12,6 +11,13 @@ def createHeader(commandID):
 
     return header
 
+def createResponse(success: bool, value: bytes):
+    response = edge_pb2.Response()
+    response.success = success
+    response.value = value
+
+    return response
+
 def send(sock, header, data):
     header.messageLength = len(data)
 
@@ -20,7 +26,7 @@ def send(sock, header, data):
     
     sock.sendall(header_length + header_bytes + data)
 
-def recv(sock):
+def recv(sock): 
     header_length_bytes = sock.recv(4)
     header_length = int.from_bytes(header_length_bytes, byteorder="little", signed=False)
 

@@ -1,9 +1,12 @@
-import socket, threading
+import socket, threading, logging
 from lib import edge_pb2, net
+from lib.scheduler import Scheduler
 
 #ip, port, hasHeartbeat
 edge_clients = []
-heartbeat_timeout_s = 5
+heartbeat_timeout_s = 30
+scheduler = Scheduler()
+logger = logging.getLogger(__name__)
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -28,51 +31,58 @@ def searchEdgeClients(addr):
 # not removed on the next pass.
 # Reinvoked asynchronously every heartbeat_timeout_s
 def removeDeadClients():
-    print(edge_clients)
+    logger.debug(edge_clients)
 
     index = 0
     for client in edge_clients:
         if (client["has_timed_out"] == True):
+            logger.info(f"Removed dead client {client} at index {index}")
             edge_clients.pop(index)
         else:
             client["has_timed_out"] = True
 
         index += 1
-    print(edge_clients)
+    logger.debug(edge_clients)
 
     threading.Timer(heartbeat_timeout_s, removeDeadClients).start()
 
-# Returns the index of the next node to be scheduled in the edge clients list.
-current_node = 0
-def scheduler():
-    if current_node >= len(edge_clients):
-        current_node = 0
-
-    # TODO: case when there are no nodes
-    
-    node_index = current_node
-    current_node += 1
-
-    return node_index
-
 # Called when a task is submitted to the access server by a client.
-# TODO: make thread safe
-def scheduleTask():
-    scheduled_index = scheduler()
+def scheduleTask(header, raw_payload):
+    scheduled_index = scheduler.schedule(edge_clients)
+    if (scheduled_index == -1):
+        return net.createResponse(False, "There are no avaiable clients to perform the task").SerializeToString()
 
-    print(f"Index of node scheduled: {scheduled_index}")
-    print(f"Node scheduled: {edge_clients[scheduled_index]}")
+    scheduled_node = edge_clients[scheduled_index]
+
+    logger.info(f"Scheduled task on node {scheduled_node}")
+
+    edge_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    edge_connection.connect((scheduled_node["IP"], scheduled_node["port"]))
+
+    net.send(edge_connection, header, raw_payload)
+    _, response = net.recv(edge_connection)
+
+    return response
+
 
 # Called when an edge client sends a heartbeat signal. Sets the client's 
 # has timed out flag to false. 
-# TODO: return error response if the client isn't in the list so that the 
-# client can re-register
-def heartbeat(addr):
-    print("Received Heartbeat")
+def heartbeat(raw_payload):
+    heartbeat_payload = edge_pb2.Heartbeat()
+    heartbeat_payload.ParseFromString(raw_payload)
 
-    index = searchEdgeClients(addr)
+    ip = socket.inet_ntop(socket.AF_INET, heartbeat_payload.IP)
+    port = heartbeat_payload.port
+
+    logger.info(f"Received heartbeat from {ip}:{port}")
+
+    index = searchEdgeClients((ip, port))
     if index != -1:
         edge_clients[index]["has_timed_out"] = False
+        
+        return net.createResponse(True, b"Success").SerializeToString()
+    
+    return net.createResponse(False, b"Edge node does not exist!").SerializeToString()
 
 # Registers an edge client as alive. Adds its IP, port and its timed out flag
 # to the list of edge clients.
@@ -83,35 +93,52 @@ def edgeNodeRegistration(raw_payload):
     ip = socket.inet_ntop(socket.AF_INET, registration.IP)
     port = registration.port
 
+    # Ensure client isn't already registered
+    index = searchEdgeClients((ip, port))
+    if index != -1:
+        return net.createResponse(False, b"Client already exists in the registry!")
+
+    # Add client to the registry
     edge_clients.append({
         "IP": ip,
         "port": port,
         "has_timed_out": False
     })
 
-    print(f"IP: {ip}")
-    print(f"Port: {port}")
+    logger.info(f"Regstering node {ip}:{port}")
+
+    return net.createResponse(True, b"Success").SerializeToString()
 
 def handleRequest(sock, addr):
     parsed_header, raw_payload = net.recv(sock)
-    
+    response = b""
+
     match parsed_header.commandID:
         # Schedule task
         case net.Commands.SCHEDULE_TASK:
-            scheduleTask(raw_payload)
+            response = scheduleTask(parsed_header, raw_payload)
         # Heartbeat
         case net.Commands.HEARTBEAT:
-            heartbeat(addr)
+            response = heartbeat(raw_payload)
         # Edge node registration
         case net.Commands.REGISTRATION:
-            edgeNodeRegistration(raw_payload)
+            response = edgeNodeRegistration(raw_payload)
+
+    header = net.createHeader(parsed_header.commandID)
+    net.send(sock, header, response)
 
 def main():
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        filename='edge-access-log',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
     removeDeadClients()
 
     while True:
         sock, addr = server.accept()
-        print("Connection accepted")
 
         handleRequest(sock, addr)
 
