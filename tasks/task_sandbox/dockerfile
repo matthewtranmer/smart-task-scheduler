@@ -1,0 +1,6 @@
+FROM python:3.14-alpine
+
+WORKDIR /app
+COPY main.py /app/main.py
+
+ENTRYPOINT [ "python3", "-u", "main.py" ]

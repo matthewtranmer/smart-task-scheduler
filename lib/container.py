@@ -1,97 +1,108 @@
 import docker, socket
 from docker.types import LogConfig
+import asyncio
+import time
 
 class Container:
     client = docker.from_env()
-    lc = LogConfig(type=LogConfig.types.NONE)
 
-    def __init__(self, image, cpu_time_ms=None, deadline_ms=None):
-        cpu_time_us = ""
-        deadline_us = ""
-
-        if (cpu_time_ms != None and deadline_ms != None):
-            cpu_time_us = cpu_time_ms * 1000
-            deadline_us = deadline_ms * 1000
+    def __init__(self, image, pool_id=0):
+        self.pool_id = pool_id
 
         self.container = self.client.containers.create(
             image,
-            stdin_open=True,
             tty=False,
+            stdin_open=True,
             auto_remove=True,
             network_disabled=True,
             cap_add=["SYS_NICE"],
-            user="root",
-            detach=False,
+            user="root", # Danger
+            detach=True,
             read_only=True,              
-            tmpfs={
-                "/tmp": "rw,size=64m",   # RAM-backed scratch dirs
-                "/run": "rw,size=16m",
-                "/var/log": "rw,size=16m"
-            },
-            log_config=self.lc
         )
 
         self.container.start()
 
+        self.sock = self.container.attach_socket(params={"stdin": 1, "stdout": 1, "stream": 1})
+        self.sock._sock.settimeout(2)
+
     def getContainer(self):
         return self.container
 
-    def sendInput(self, data):
-        # Attach a socket to the containers standard I/O streams 
-        sock = self.client.api.attach_socket(self.container.id, params={"stdin":1, "stream":1})
+    def send(self, data: bytes):
+        self.sock._sock.sendall(data + b"\n")
 
-        # Stream input data to stdin
-        sock._sock.sendall(data)
-        # Close stdin
-        sock._sock.shutdown(socket.SHUT_WR) 
+    def _parseDockerHeader(self, header) -> dict:
+        parsed_header = {}
 
-    def getOutput(self):
-        # Read output as it arrives
-        stdout_chunks = []
-        stderr_chunks = []
+        if (header[0] == 1):
+            parsed_header["stream"] = "stdout" 
+        elif (header[0] == 2):
+            parsed_header["stream"] = "stderr"
 
-        # Connect to the container
-        stream = self.client.api.attach(self.container.id, stdout=True, stderr=True, stream=True, demux=True)
-        for out in stream:
-            if out[0]:
-                stdout_chunks.append(out[0])
-            if out[1]:
-                stderr_chunks.append(out[1])
+        payload_length_bytes = header[4:]
+        parsed_header["payload_length"] = int.from_bytes(payload_length_bytes, 'big', signed=False)
 
-        # Wait for exit & get status code
-        status = self.container.wait()  # {'StatusCode': int}
-        status_code = status.get("StatusCode", -1)
+        return parsed_header
 
-        # Convert to string
-        stdout = b"".join(stdout_chunks)
-        stderr = b"".join(stderr_chunks)
+    def _recv(self) -> bytes:
+        header = self.sock._sock.recv(8)
+        parsed_header = self._parseDockerHeader(header)
 
-        return (stdout, stderr, status_code)
+        data = self.sock._sock.recv(parsed_header["payload_length"])
+        return data
+
+    def receieveOutput(self) -> str:
+        return self._recv().decode().strip()
     
-    # Return execution time in ns
-    def runtime(self):
-        # Reads past events for this container; works even after auto-remove
-        start_ns = end_ns = None
-
-        for ev in self.container.client.events(decode=True, since=0, filters={"container": self.container.id}):
-            act = ev.get("Action")
-            if act == "start" and start_ns is None:
-                start_ns = ev["timeNano"]
-            
-            elif act == "die":
-                end_ns = ev["timeNano"]
-                break
-
-        if start_ns is None or end_ns is None:
-            raise RuntimeError("Missing start/die events")
-        return end_ns - start_ns
+    def stop(self):
+        self.container.stop()
+    
+    def getPoolID(self):
+        return self.pool_id
     
 class ContainerPool:
     containers = []
+    max_container_count = 0
+    current_container = 0
+    assigned_containers = 0
+    image = ""
+    lock = asyncio.Lock()
 
-    def __init__(self, image, container_count):
+    def __init__(self, image, container_count, max_container_count):
+        self.max_container_count = max_container_count
+        self.image = image
+
         for i in range(container_count):
             new_container = Container(image=image)
+            self.containers.append(new_container)
 
     def getContainer(self):
-        pass
+        self.lock.acquire()
+
+        if (self.assigned_containers <= self.max_container_count):
+            self.assigned_containers += 1
+
+        if (len(self.containers) <= 0):
+            if (self.assigned_containers >= self.max_container_count):
+                #Create short lived container (pool_id = 1)
+                new_container = Container(self.image, 1)
+            else:
+                #Create new container
+                new_container = Container(self.image)
+        else:
+            # Get container from pool
+            new_container = self.containers.pop(0) 
+
+        self.lock.release()
+        return new_container
+    
+    def releaseContainer(self, container: Container):
+        # One off container
+        if (container.getPoolID() == 1):
+            container.stop()
+            return
+
+        self.lock.acquire()
+        self.containers.append(container)
+        self.lock.release()

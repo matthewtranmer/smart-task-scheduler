@@ -6,14 +6,10 @@ from lib import container
 
 
 
-IMAGE = "addition"
+IMAGE = "task_sandbox"
 
 # Connect to the local docker daemon
-client = docker.from_env()
-lc = LogConfig(type=LogConfig.types.NONE)
-lc = LogConfig(type=LogConfig.types.NONE)
-
-
+# Traceback (most recent call last):\n  File "/app/main.py", line 53, in <module>\n    main()\n    ~~~~^^\n  File "/app/main.py", line 42, in main\n    match input["task_name"]:\n          ~~~~~^^^^^^^^^^^^^\nKeyError: \'task_name\'\n'
 
 
 #0.311976250798 - UB - 0.47164257 - addition
@@ -22,31 +18,36 @@ lc = LogConfig(type=LogConfig.types.NONE)
 
 def main():
     run_times = []
-    for i in range(500):
+
+    payload = json.dumps({"task_name": "addition", "a": 2, "b": 30}).encode()
+    cont = container.Container(IMAGE)
+
+    for i in range(10):
         
         try:
-            payload = json.dumps({"a": 2, "b": 20}).encode()
+            print(cont.getContainer().id)
 
-            cont = container.Container(IMAGE)
-            
+            print(1)
             cont.sendInput(payload)
-            stdout, stderr, exit_code = cont.getOutput()
+            print(2)
+            stdout = cont.getOutput()
+            print(3)
 
             # Precise runtime + exit code from events
             runtime_ns = cont.runtime()
             runtime_s = runtime_ns / 1_000_000_000
-            
-            if (exit_code != 0):
-                print("EXIT CODE:", exit_code)
-                print("STDOUT:", stdout)
-                print("STDERR:", stderr)
+
+            print("STDOUT:", stdout)
+            # print("STDERR:", stderr)
             print("Runtime:", runtime_s)
+
 
             run_times.append(runtime_s)
 
         finally:
             # Optional: nothing to remove; auto_remove=True
             pass
+
 
     print("Done")
     mean = sum(run_times)/len(run_times)
