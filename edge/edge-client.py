@@ -1,5 +1,14 @@
 import socket, time, threading, random
-from lib import edge_pb2, net
+from lib import edge_pb2, net, container
+
+PROCESSOR_SPEED = 3_400_000_000_000 #3.4GHz
+
+task_parameters = [
+    {
+        "image": "addition",
+        "CPU_time_ms": 312
+    }
+]
 
 heartbeat_interval = 30
 
@@ -56,11 +65,41 @@ def registerNode():
 def runTask(task: edge_pb2.Task):
     print(f"Running task with id {task.taskID} and input {task.input} on node {ip}:{port}")
 
-    sleep_time = random.uniform(0, 1)
-    time.sleep(sleep_time)
+    cpu_time = task_parameters[task.taskID]["CPU_time_ms"]
+    image = task_parameters[task.taskID]["image"]
 
-    response = str(sleep_time).encode()
+    if (task.deadline_ms > cpu_time * 2.5):
+        adjusted_deadline_ms = task.deadline_ms * 0.8
+        adjusted_cpu_time = cpu_time * 1.5
+
+        if (adjusted_cpu_time > adjusted_deadline_ms):
+            adjusted_cpu_time = adjusted_deadline_ms
+
+        print(f"Scheduling task with throttling - CPU_time: {adjusted_cpu_time}, deadline: {adjusted_deadline_ms}")
+        cont = container.Container(
+            image,
+            adjusted_deadline_ms,
+            adjusted_cpu_time
+        )
+    else:
+        print("Scheduling task normally")
+        cont = container.Container(image)
+
+    cont.sendInput(task.input)
+    
+    stdout, stderr, exit_code = cont.getOutput()
+    if (exit_code == 0):
+        response = stdout
+    else:
+        print(f"Container stderr: {stderr}")
+        response = b""
+
+    execution_time_ms = cont.runtime() / 1_000_000
+
     print(f"Response generated as: {response}")
+    print(f"Execution time: {execution_time_ms}ms")
+    print(f"Deadline: {task.deadline_ms}ms")
+    print("")
 
     return response
 
@@ -98,7 +137,8 @@ def main():
         sock, addr = server.accept()
         sock.settimeout(2)
 
-        handleRequest(sock, addr)
+        thread = threading.Thread(target=handleRequest, args=(sock, addr))
+        thread.start()
 
 if __name__ == "__main__":
     main()

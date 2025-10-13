@@ -1,0 +1,14 @@
+{
+  "core": 2,
+  "image": "addition",
+  "command": [
+    "bash",
+    "-c",
+    "sysbench cpu run > /dev/null"
+  ],
+  "realtime": false,
+  "exit_code": 1,
+  "metrics": {},
+  "perf_raw": "Problems finding threads of monitor\n\n Usage: perf stat [<options>] [<command>]\n\n    -p, --pid <pid>       stat events on existing process id\n    -t, --tid <tid>       stat events on existing thread id\n",
+  "logs_tail": "Traceback (most recent call last):\n  File \"/app/process.py\", line 33, in <module>\n    main()\n  File \"/app/process.py\", line 29, in main\n    response = perform(input[\"a\"], input[\"b\"])\n                       ~~~~~^^^^^\nKeyError: 'a'"
+}
