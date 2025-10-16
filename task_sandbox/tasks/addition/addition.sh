@@ -1,0 +1,1 @@
+exec "python3" "task_sandbox/tasks/addition/addition.py" "$1"

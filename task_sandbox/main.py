@@ -1,14 +1,9 @@
-import time, sys, json, socket
+import time, sys, json, socket, os, subprocess
 
 def wasteTime(iterations):
     index = 0
     for i in range(iterations):
         index += 1
-
-def addition(a, b):
-    return_val = a + b
-    wasteTime(12_000_000)
-    return return_val
 
 def multiplication(a, b):
     return_val = a * b
@@ -31,7 +26,8 @@ def main():
         # Select task
         match input["task_name"]:
             case "addition":
-                response = addition(input["a"], input["b"])
+                result = subprocess.run(["/bin/sh", "/app/tasks/addition/addition.sh", input["task_params"]], capture_output=True, text=True)
+                response = result.stdout
             case "multiplication":
                 response = multiplication(input["a"], input["b"])
             case "division":

@@ -3,4 +3,6 @@ FROM python:3.14-alpine
 WORKDIR /app
 COPY main.py /app/main.py
 
+COPY tasks /app/tasks
+
 ENTRYPOINT [ "python3", "-u", "main.py" ]

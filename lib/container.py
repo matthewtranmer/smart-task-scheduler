@@ -1,14 +1,12 @@
 import docker, socket
 from docker.types import LogConfig
-import asyncio
+import threading
 import time
 
 class Container:
     client = docker.from_env()
 
-    def __init__(self, image, pool_id=0):
-        self.pool_id = pool_id
-
+    def __init__(self, image):
         self.container = self.client.containers.create(
             image,
             tty=False,
@@ -16,14 +14,14 @@ class Container:
             auto_remove=True,
             network_disabled=True,
             cap_add=["SYS_NICE"],
-            user="root", # Danger
+            user="root", # Danger - change in prod
             detach=True,
             read_only=True,              
         )
 
         self.container.start()
 
-        self.sock = self.container.attach_socket(params={"stdin": 1, "stdout": 1, "stream": 1})
+        self.sock = self.container.attach_socket(params={"stdin": 1, "stdout": 1, "stderr": 1,"stream": 1})
         self.sock._sock.settimeout(2)
 
     def getContainer(self):
@@ -47,6 +45,9 @@ class Container:
 
     def _recv(self) -> bytes:
         header = self.sock._sock.recv(8)
+        if (len(header) < 8):
+            return b''
+        
         parsed_header = self._parseDockerHeader(header)
 
         data = self.sock._sock.recv(parsed_header["payload_length"])
@@ -57,9 +58,31 @@ class Container:
     
     def stop(self):
         self.container.stop()
+
+    def kill(self):
+        self.container.kill()
     
-    def getPoolID(self):
-        return self.pool_id
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.kill()
+
+class PoolContainer():
+    pool = None
+    container = None
+    short_lived = False
+
+    def __init__(self, pool, container, short_lived=False):
+        self.pool = pool
+        self.container = container
+        self.short_lived = short_lived
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.pool.releaseContainer(self)
     
 class ContainerPool:
     containers = []
@@ -67,7 +90,7 @@ class ContainerPool:
     current_container = 0
     assigned_containers = 0
     image = ""
-    lock = asyncio.Lock()
+    lock = threading.Lock()
 
     def __init__(self, image, container_count, max_container_count):
         self.max_container_count = max_container_count
@@ -83,26 +106,37 @@ class ContainerPool:
         if (self.assigned_containers <= self.max_container_count):
             self.assigned_containers += 1
 
+        short_lived = False
         if (len(self.containers) <= 0):
-            if (self.assigned_containers >= self.max_container_count):
-                #Create short lived container (pool_id = 1)
-                new_container = Container(self.image, 1)
-            else:
-                #Create new container
-                new_container = Container(self.image)
+            if (self.assigned_containers > self.max_container_count):
+                #Create short lived container
+                print("Making short lived container") 
+                short_lived = True
+
+            #Create new container
+            new_container = Container(self.image)
         else:
             # Get container from pool
             new_container = self.containers.pop(0) 
 
         self.lock.release()
-        return new_container
+        return PoolContainer(self, new_container, short_lived)
     
-    def releaseContainer(self, container: Container):
+    def releaseContainer(self, pool_container: PoolContainer):
         # One off container
-        if (container.getPoolID() == 1):
-            container.stop()
+        if (pool_container.short_lived == True):
+            print("Short lived, killing")
+            pool_container.container.kill()
             return
 
         self.lock.acquire()
-        self.containers.append(container)
+        self.containers.append(pool_container.container)
         self.lock.release()
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        print("Cleaning up containers")
+        for cont in self.containers:
+            cont.kill()
