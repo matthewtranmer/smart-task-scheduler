@@ -24,19 +24,24 @@ def main():
         input = json.loads(line)
 
         # Select task
-        match input["task_name"]:
-            case "addition":
-                result = subprocess.run(["/bin/sh", "/app/tasks/addition/addition.sh", input["task_params"]], capture_output=True, text=True)
-                response = result.stdout
-            case "multiplication":
-                response = multiplication(input["a"], input["b"])
-            case "division":
-                response = division(input["a"], input["b"])
+        match input["id"]:
+            case 0:
+                result = subprocess.run(["/bin/sh", "/app/tasks/addition/addition.sh", input["params"]], capture_output=True, text=True)
+            case 100:
+                print("TEST", flush=True)
+                continue
+
+        if result.stderr != "":
+            print(result.stderr, file=sys.stderr, flush=True)
+        else:
+            print(result.stdout, flush=True)  
 
         # Send result back
-        print(response, flush=True)
+        # print(response, flush=True)
 
 if __name__ == "__main__":
     main()
 
 
+
+# {"id": 0, "params": "{\"a\": 2, \"b\": 20}"}

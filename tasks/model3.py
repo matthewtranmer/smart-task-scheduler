@@ -1,13 +1,13 @@
-import json
+import json, time
 from lib import container
 
 cont = container.Container("task_sandbox")
 
 for i in range(1):
-    data = json.dumps({"task_name": "addition", "task_params": "\"{\"a\":1, \"b\":2}\""})
+    data = json.dumps({"id": 0, "params": "\"{\"a\":1, \"b\":2}\""})
     cont.send(data.encode())
-
-    print(cont.receieveOutput())
+    time.sleep(1)
+    print(cont.receive())
     # print(cont.receieveOutput())
     # print(cont.receieveOutput())
     # print(cont.receieveOutput())

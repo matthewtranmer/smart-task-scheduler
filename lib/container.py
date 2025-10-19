@@ -43,18 +43,28 @@ class Container:
 
         return parsed_header
 
-    def _recv(self) -> bytes:
+    def _recv(self) -> tuple[dict, bytes]:
         header = self.sock._sock.recv(8)
         if (len(header) < 8):
-            return b''
+            return (None, b'')
         
         parsed_header = self._parseDockerHeader(header)
 
         data = self.sock._sock.recv(parsed_header["payload_length"])
-        return data
+        return (parsed_header, data)
 
-    def receieveOutput(self) -> str:
-        return self._recv().decode().strip()
+    def receive(self) -> tuple[str, bool]:
+        header, payload = self._recv()
+
+        if (header == None):
+            return (payload, False)
+        
+        error = False
+        if header["stream"] == "stderr":
+            error = True
+        
+        data = payload.decode().strip()
+        return (data, error)
     
     def stop(self):
         self.container.stop()
@@ -106,6 +116,8 @@ class ContainerPool:
         if (self.assigned_containers <= self.max_container_count):
             self.assigned_containers += 1
 
+        print(f"Assigned containers: {self.assigned_containers}")
+
         short_lived = False
         if (len(self.containers) <= 0):
             if (self.assigned_containers > self.max_container_count):
@@ -115,6 +127,7 @@ class ContainerPool:
 
             #Create new container
             new_container = Container(self.image)
+            print("Creating new container")
         else:
             # Get container from pool
             new_container = self.containers.pop(0) 
@@ -123,6 +136,8 @@ class ContainerPool:
         return PoolContainer(self, new_container, short_lived)
     
     def releaseContainer(self, pool_container: PoolContainer):
+        print("Releasing container")
+
         # One off container
         if (pool_container.short_lived == True):
             print("Short lived, killing")
@@ -131,12 +146,71 @@ class ContainerPool:
 
         self.lock.acquire()
         self.containers.append(pool_container.container)
+        self.assigned_containers -= 1
         self.lock.release()
 
     def __enter__(self):
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
+        print("Cleaning up containers")
         print("Cleaning up containers")
         for cont in self.containers:
             cont.kill()

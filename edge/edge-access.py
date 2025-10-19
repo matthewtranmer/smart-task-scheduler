@@ -8,9 +8,11 @@ heartbeat_timeout_s = 30
 scheduler = Scheduler()
 logger = logging.getLogger(__name__)
 
+ip = net.getLocalIP()
+
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server.bind(("127.0.0.1", 2004))
+server.bind((ip, 2004))
 
 server.listen()
 
@@ -51,7 +53,7 @@ def scheduleTask(header, raw_payload):
     for _ in range(100):
         scheduled_index = scheduler.schedule(edge_clients)
         if (scheduled_index == -1):
-            return net.createResponse(False, "There are no avaiable clients to perform the task").SerializeToString()
+            return net.createResponse(False, b"There are no avaiable clients to perform the task").SerializeToString()
 
         scheduled_node = edge_clients[scheduled_index]
         ip = scheduled_node["IP"]
@@ -143,7 +145,7 @@ def handleRequest(sock, addr):
 def main():
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
-        filename='edge-access-log',
+        #filename='edge-access-log',
         level=logging.INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )

@@ -1,1 +1,1 @@
-exec "python3" "task_sandbox/tasks/addition/addition.py" "$1"
+exec "python3" "/app/tasks/addition/addition.py" "$1"

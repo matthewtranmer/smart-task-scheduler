@@ -28,7 +28,7 @@ def submitTask(task):
 def main():
     while True:
         payload = json.dumps({"a": 2, "b": 20}).encode()
-        task = createTask(0, payload, 500)
+        task = createTask(0, payload, 1000)
 
         print("Submitted Task")
 

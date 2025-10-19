@@ -1,4 +1,5 @@
 from lib import edge_pb2
+import socket
 
 class Commands():
     SCHEDULE_TASK = 1
@@ -38,3 +39,15 @@ def recv(sock):
     raw_payload = sock.recv(parsed_header.messageLength)
 
     return (parsed_header, raw_payload)
+
+# Get IP of local machine
+def getLocalIP():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Connect to google DNS IP
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
+

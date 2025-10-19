@@ -1,4 +1,4 @@
-import socket, time, threading, random
+import socket, time, threading, random, json
 from lib import edge_pb2, net, container
 
 PROCESSOR_SPEED = 3_400_000_000_000 #3.4GHz
@@ -12,11 +12,13 @@ task_parameters = [
 
 heartbeat_interval = 30
 
+ip = net.getLocalIP()
+
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server.bind(("127.0.0.1", 0))
+server.bind((ip, 0))
 
-ip, port = server.getsockname()
+_, port = server.getsockname()
 server.listen()
 
 print(f"Edge client started on address {ip}:{port}")
@@ -62,7 +64,7 @@ def registerNode():
     print(response)
 
 # Run the task on the current node
-def runTask(task: edge_pb2.Task):
+def runTask(task: edge_pb2.Task, container_pool):
     print(f"Running task with id {task.taskID} and input {task.input} on node {ip}:{port}")
 
     cpu_time = task_parameters[task.taskID]["CPU_time_ms"]
@@ -76,34 +78,48 @@ def runTask(task: edge_pb2.Task):
             adjusted_cpu_time = adjusted_deadline_ms
 
         print(f"Scheduling task with throttling - CPU_time: {adjusted_cpu_time}, deadline: {adjusted_deadline_ms}")
-        cont = container.Container(
-            image,
-            adjusted_deadline_ms,
-            adjusted_cpu_time
-        )
+        print("Not implemented...")
+        # cont = container.Container(
+        #     image,
+        #     adjusted_deadline_ms,
+        #     adjusted_cpu_time
+        # )
     else:
         print("Scheduling task normally")
-        cont = container.Container(image)
+        # cont = container.Container(image)
 
-    cont.sendInput(task.input)
-    
-    stdout, stderr, exit_code = cont.getOutput()
-    if (exit_code == 0):
-        response = stdout
-    else:
-        print(f"Container stderr: {stderr}")
-        response = b""
+    with container_pool.getContainer() as pool_container:
+        cont = pool_container.container
 
-    execution_time_ms = cont.runtime() / 1_000_000
+        container_params = {"id": task.taskID, "params": task.input.decode()}
+        json_params = json.dumps(container_params)
+        print(f"JSON params: {json_params}")
 
-    print(f"Response generated as: {response}")
-    print(f"Execution time: {execution_time_ms}ms")
-    print(f"Deadline: {task.deadline_ms}ms")
-    print("")
+        start_time = time.perf_counter()
+        cont.send(json_params.encode())
 
-    return response
+        output, error = cont.receive()
+        end_time = time.perf_counter()
 
-def handleRequest(sock, addr):
+        print(f"Output length: {len(output)}")
+
+        execution_time_ms = (end_time - start_time) * 1000
+
+        if (error):
+            print("Error running container")
+            while len(output) > 0:
+                output, error = cont.receive()
+                print(output) 
+
+        else:
+            print(f"Response generated as: {output}")
+            print(f"Execution time: {execution_time_ms}ms")
+            print(f"Deadline: {task.deadline_ms}ms")
+            print("")
+
+        return output
+
+def handleRequest(sock, addr, container_pool):
     parsed_header, raw_payload = net.recv(sock)   
     response_value = b"" 
 
@@ -111,10 +127,10 @@ def handleRequest(sock, addr):
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
 
-        response_value = runTask(task)
+        response_value = runTask(task, container_pool)
 
     if (response_value != ""):
-        response = net.createResponse(True, response_value)
+        response = net.createResponse(True, response_value.encode())
     else:
         response = net.createResponse(False, b"Error running task")
 
@@ -133,12 +149,17 @@ def main():
     registerNode()
     heartbeatSender()
 
-    while True:
-        sock, addr = server.accept()
-        sock.settimeout(2)
+    try:
+        with container.ContainerPool("task_sandbox", 1, 50) as container_pool:
+            while True:
+                sock, addr = server.accept()
+                sock.settimeout(2)
 
-        thread = threading.Thread(target=handleRequest, args=(sock, addr))
-        thread.start()
+                thread = threading.Thread(target=handleRequest, args=(sock, addr, container_pool), daemon=True)
+                thread.start()
+    except Exception:
+        print("test")
 
 if __name__ == "__main__":
     main()
+

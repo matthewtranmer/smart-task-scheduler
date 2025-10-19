@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 # Determine paths
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
@@ -35,18 +35,31 @@ done
 echo "All $instances instance(s) started. PIDs: ${pids[*]}"
 echo "Press Ctrl-C to stop; forwarding signal to children..."
 
-# Forward INT/TERM to children and clean up
 cleanup() {
   echo
   echo "Stopping ${#pids[@]} instance(s)..."
+
+  # First try SIGINT so Python raises KeyboardInterrupt
   for pid in "${pids[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-    fi
+    kill -s INT "$pid" 2>/dev/null || true
   done
+
+  # Give them a moment to unwind context managers
+  sleep 1
+
+  echo "killing"
+
+  # If any are still alive, escalate to TERM then KILL
+  for pid in "${pids[@]}"; do
+    kill -s TERM "$pid" 2>/dev/null || true
+  done
+  sleep 2
+  for pid in "${pids[@]}"; do
+    kill -s KILL "$pid" 2>/dev/null || true
+  done
+
   wait
 }
 trap cleanup INT TERM
-
-# Wait for all children
 wait
+
