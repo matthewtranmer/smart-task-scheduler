@@ -13,6 +13,7 @@ task_parameters = [
 heartbeat_interval = 30
 
 ip = net.getLocalIP()
+access_server_address = ("10.45.1.34", 2004)
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -26,7 +27,7 @@ print(f"Edge client started on address {ip}:{port}")
 # Send an still alive signal to the access server. 
 def sendHeartbeat():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(("127.0.0.1", 2004))
+    client.connect(access_server_address)
 
     header = net.createHeader(net.Commands.HEARTBEAT)
 
@@ -46,7 +47,7 @@ def sendHeartbeat():
 # Register the node as alive with the access server
 def registerNode():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(("127.0.0.1", 2004))
+    client.connect(access_server_address)
     
     header = net.createHeader(net.Commands.REGISTRATION)
 
