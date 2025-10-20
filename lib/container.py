@@ -1,4 +1,4 @@
-import docker, socket
+import docker, socket, random, os
 from docker.types import LogConfig
 import threading
 import time
@@ -18,6 +18,8 @@ class Container:
             detach=True,
             read_only=True,              
         )
+
+        self.containerID = self.container.id
 
         self.container.start()
 
@@ -45,8 +47,9 @@ class Container:
 
     def _recv(self) -> tuple[dict, bytes]:
         header = self.sock._sock.recv(8)
+        print(f"Header length: {len(header)}")
         if (len(header) < 8):
-            return (None, b'')
+            raise EOFError(f"Container {self.containerID} closed output stream")
         
         parsed_header = self._parseDockerHeader(header)
 
@@ -55,6 +58,11 @@ class Container:
 
     def receive(self) -> tuple[str, bool]:
         header, payload = self._recv()
+        print(f"Receveing len:{len(payload)}, payload: {payload}")
+
+        if (len(payload) == 0):
+            print("-----HEADER-----------------------------------------------------------:")
+            print(header)
 
         if (header == None):
             return (payload, False)
@@ -87,6 +95,7 @@ class PoolContainer():
         self.pool = pool
         self.container = container
         self.short_lived = short_lived
+        self.id = container.containerID
 
     def __enter__(self):
         return self
@@ -154,63 +163,6 @@ class ContainerPool:
     
     def __exit__(self, exc_type, exc_value, traceback):
         print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
-        print("Cleaning up containers")
+
         for cont in self.containers:
             cont.kill()

@@ -65,41 +65,52 @@ def registerNode():
     print(response)
 
 # Run the task on the current node
-def runTask(task: edge_pb2.Task, container_pool):
+def runTask(task: edge_pb2.Task, container_pool) -> str:
     print(f"Running task with id {task.taskID} and input {task.input} on node {ip}:{port}")
 
-    cpu_time = task_parameters[task.taskID]["CPU_time_ms"]
-    image = task_parameters[task.taskID]["image"]
+    # cpu_time = task_parameters[task.taskID]["CPU_time_ms"]
+    # image = task_parameters[task.taskID]["image"]
 
-    if (task.deadline_ms > cpu_time * 2.5):
-        adjusted_deadline_ms = task.deadline_ms * 0.8
-        adjusted_cpu_time = cpu_time * 1.5
+    # if (task.deadline_ms > cpu_time * 2.5):
+    #     adjusted_deadline_ms = task.deadline_ms * 0.8
+    #     adjusted_cpu_time = cpu_time * 1.5
 
-        if (adjusted_cpu_time > adjusted_deadline_ms):
-            adjusted_cpu_time = adjusted_deadline_ms
+    #     if (adjusted_cpu_time > adjusted_deadline_ms):
+    #         adjusted_cpu_time = adjusted_deadline_ms
 
-        print(f"Scheduling task with throttling - CPU_time: {adjusted_cpu_time}, deadline: {adjusted_deadline_ms}")
-        print("Not implemented...")
-        # cont = container.Container(
-        #     image,
-        #     adjusted_deadline_ms,
-        #     adjusted_cpu_time
-        # )
-    else:
-        print("Scheduling task normally")
-        # cont = container.Container(image)
+    #     print(f"Scheduling task with throttling - CPU_time: {adjusted_cpu_time}, deadline: {adjusted_deadline_ms}")
+    #     print("Not implemented...")
+    #     # cont = container.Container(
+    #     #     image,
+    #     #     adjusted_deadline_ms,
+    #     #     adjusted_cpu_time
+    #     # )
+    # else:
+    #     print("Scheduling task normally")
+    #     # cont = container.Container(image)
 
     with container_pool.getContainer() as pool_container:
+        print("Scheduling....")
         cont = pool_container.container
 
-        container_params = {"id": task.taskID, "params": task.input.decode()}
+        input_id = str(random.randint(0,99999999999999999))
+
+        container_params = {"id": task.taskID, "params": task.input.decode(), "input_id": input_id}
         json_params = json.dumps(container_params)
         print(f"JSON params: {json_params}")
 
         start_time = time.perf_counter()
+        
+        print(f"Container {pool_container.id} sending {json_params}")
         cont.send(json_params.encode())
 
-        output, error = cont.receive()
+        count = 0
+        output = ""
+        while output == "":
+            output, error = cont.receive()
+            print(f"Container {pool_container.id} count {count}, received out: {output}, err: {error}")
+            count += 1
+
         end_time = time.perf_counter()
 
         print(f"Output length: {len(output)}")
@@ -111,14 +122,16 @@ def runTask(task: edge_pb2.Task, container_pool):
             while len(output) > 0:
                 output, error = cont.receive()
                 print(output) 
-
         else:
             print(f"Response generated as: {output}")
             print(f"Execution time: {execution_time_ms}ms")
             print(f"Deadline: {task.deadline_ms}ms")
             print("")
 
-        return output
+        
+        
+
+        return output, input_id
 
 def handleRequest(sock, addr, container_pool):
     parsed_header, raw_payload = net.recv(sock)   
@@ -128,12 +141,13 @@ def handleRequest(sock, addr, container_pool):
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
 
-        response_value = runTask(task, container_pool)
+        response_value, INPUT_ID = runTask(task, container_pool)
 
     if (response_value != ""):
         response = net.createResponse(True, response_value.encode())
     else:
-        response = net.createResponse(False, b"Error running task")
+        print("err")
+        response = net.createResponse(False, b"Error running task" + str(INPUT_ID).encode())
 
     header = net.createHeader(parsed_header.commandID)
     net.send(sock, header, response.SerializeToString())

@@ -34,7 +34,7 @@ def main():
         if result.stderr != "":
             print(result.stderr, file=sys.stderr, flush=True)
         else:
-            print(result.stdout, flush=True)  
+            print(result.stdout + ",id:" + input["input_id"], flush=True)  
 
         # Send result back
         # print(response, flush=True)

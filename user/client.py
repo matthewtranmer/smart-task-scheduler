@@ -1,5 +1,7 @@
-import socket, time, threading, json
+import socket, time, threading, json, random, os
 from lib import edge_pb2, net
+
+access_server_address = ("10.45.1.34", 2004)
 
 def createTask(taskID: int, input: bytes, deadline_ms: int):
     task = edge_pb2.Task()
@@ -11,7 +13,7 @@ def createTask(taskID: int, input: bytes, deadline_ms: int):
 
 def submitTask(task):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(("127.0.0.1", 2004))
+    sock.connect(access_server_address)
 
     header = net.createHeader(net.Commands.SCHEDULE_TASK)
     net.send(sock, header, task.SerializeToString())
@@ -25,12 +27,24 @@ def submitTask(task):
 
     return response
 
+threads = []
+
 def main():
     while True:
-        payload = json.dumps({"a": 2, "b": 20}).encode()
+        a = random.randint(1,10)
+        b = random.randint(1,10)
+
+        payload = json.dumps({"a": a, "b": b}).encode()
         task = createTask(0, payload, 1000)
 
+        print()
         print("Submitted Task")
+
+        true_result = a + b
+
+        print(f"true_result: {true_result}")
+        print("a:", a)
+        print("b:", b)
 
         start_time = time.time()
         response = submitTask(task)
@@ -44,18 +58,16 @@ def main():
         print(f"Response: {response}")
         print(f"Elapsed time: {time_elapsed:.3f} seconds")
 
+        res = response.value.decode()
+        result = int(res.split()[0])
+        
+        print("Result from server:", result)
+
+        if (result != true_result):
+            print("Broken")
+            os._exit(-1)
+            
+
 if __name__ == "__main__":
-    for i in range(15):
-        threading.Thread(target=main).start()
-
-# Things needed now:
-# Diagnostics
-# Implement a task
-# Improve scheduler so we schedule based on free resources
-# Thread safety - have a long think about this
-
-
-
-# Task - Double exponentiation:
-# a^b^c % 999,999,999
-# where a < 99, a < 21 and c < 5
+    for i in range(22):
+        thread = threading.Thread(target=main).start()
