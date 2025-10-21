@@ -9,10 +9,11 @@ scheduler = Scheduler()
 logger = logging.getLogger(__name__)
 
 ip = net.getLocalIP()
+PORT = 2004
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server.bind((ip, 2004))
+server.bind((ip, PORT))
 
 server.listen()
 
@@ -157,7 +158,7 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    logger.info("Starting access server")
+    logger.info(f"Starting access server on address {ip}:{PORT}")
     removeDeadClients()
 
     while True:

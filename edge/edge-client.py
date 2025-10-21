@@ -1,4 +1,4 @@
-import socket, time, threading, random, json, os
+import socket, time, threading, random, json, os, sys
 from lib import edge_pb2, net, container
 
 PROCESSOR_SPEED = 3_400_000_000_000 #3.4GHz
@@ -66,7 +66,7 @@ def registerNode():
 
 # Run the task on the current node
 def runTask(task: edge_pb2.Task, container_pool) -> str:
-    print(f"Running task with id {task.taskID} and input {task.input} on node {ip}:{port}")
+    print(f"Running task {task.inputID} with id {task.taskID} and input {task.input} on node {ip}:{port}")
 
     # cpu_time = task_parameters[task.taskID]["CPU_time_ms"]
     # image = task_parameters[task.taskID]["image"]
@@ -93,9 +93,7 @@ def runTask(task: edge_pb2.Task, container_pool) -> str:
         print("Scheduling....")
         cont = pool_container.container
 
-        input_id = str(random.randint(0,99999999999999999))
-
-        container_params = {"id": task.taskID, "params": task.input.decode(), "input_id": input_id}
+        container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
         json_params = json.dumps(container_params)
         print(f"JSON params: {json_params}")
 
@@ -104,12 +102,23 @@ def runTask(task: edge_pb2.Task, container_pool) -> str:
         print(f"Container {pool_container.id} sending {json_params}")
         cont.send(json_params.encode())
 
+        received_inputID = -1
         count = 0
         output = ""
-        while output == "":
-            output, error = cont.receive()
-            print(f"Container {pool_container.id} count {count}, received out: {output}, err: {error}")
-            count += 1
+        while received_inputID != task.inputID:
+            # This call times out and the thread just stops - container still processing input
+            try:
+                output, error = cont.receive()
+                if output == "":
+                    continue
+
+                decoded_output = json.loads(output)
+                received_inputID = decoded_output["inputID"]
+
+                print(f"Container {pool_container.id}, sent input id: {task.inputID}, received input id: {received_inputID}, count {count}, received out: {output}, err: {error}")
+                count += 1
+            except TimeoutError:
+                return net.createResponse(False, b"Container timed out")
 
         end_time = time.perf_counter()
 
@@ -128,26 +137,20 @@ def runTask(task: edge_pb2.Task, container_pool) -> str:
             print(f"Deadline: {task.deadline_ms}ms")
             print("")
 
-        
-        
-
-        return output, input_id
+        return net.createResponse(True, output.encode())
 
 def handleRequest(sock, addr, container_pool):
     parsed_header, raw_payload = net.recv(sock)   
-    response_value = b"" 
 
+    response = None
     if (parsed_header.commandID == net.Commands.SCHEDULE_TASK):
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
 
-        response_value, INPUT_ID = runTask(task, container_pool)
+        response = runTask(task, container_pool)
 
-    if (response_value != ""):
-        response = net.createResponse(True, response_value.encode())
-    else:
-        print("err")
-        response = net.createResponse(False, b"Error running task" + str(INPUT_ID).encode())
+    if response == None:
+        response = net.createResponse(False, b"Command does not exist")
 
     header = net.createHeader(parsed_header.commandID)
     net.send(sock, header, response.SerializeToString())

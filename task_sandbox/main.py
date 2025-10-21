@@ -34,7 +34,8 @@ def main():
         if result.stderr != "":
             print(result.stderr, file=sys.stderr, flush=True)
         else:
-            print(result.stdout + ",id:" + input["input_id"], flush=True)  
+            response = {"value": result.stdout, "inputID": input["inputID"]}
+            print(json.dumps(response), flush=True)  
 
         # Send result back
         # print(response, flush=True)
