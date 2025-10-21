@@ -1,4 +1,4 @@
-import socket, threading, logging
+import socket, threading, logging, traceback
 from lib import edge_pb2, net
 from lib.scheduler import Scheduler
 
@@ -62,23 +62,30 @@ def scheduleTask(header, raw_payload):
         logger.info(f"Scheduled task on node {scheduled_node}")
 
         edge_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        edge_connection.settimeout(3)
 
         try:
+            print("connecting")
             edge_connection.connect((ip, port))
             break
-        except ConnectionRefusedError:
+        except (ConnectionRefusedError, TimeoutError):
             logger.warning(f"Node {ip}:{port} is not responding! Removing from registry")
             # TODO: Unsafe - node could be removed by other routine checking for heartbeats
             # during critical section
             index = searchEdgeClients((ip, port))
             if (index != -1):
                 edge_clients.pop(index)
+        except Exception as e:
+            traceback.print_exc()
 
-    net.send(edge_connection, header, raw_payload)
-    _, response = net.recv(edge_connection)
-
-    return response
-
+    try:
+        print("sending")
+        net.send(edge_connection, header, raw_payload)
+        print("receving")
+        _, response = net.recv(edge_connection)
+        return response
+    except TimeoutError:
+        return net.createResponse(False, b"Edge node timedout").SerializeToString()
 
 # Called when an edge client sends a heartbeat signal. Sets the client's 
 # has timed out flag to false. 

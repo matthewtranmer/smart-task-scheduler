@@ -1,4 +1,4 @@
-import socket, time, threading, random, json
+import socket, time, threading, random, json, os
 from lib import edge_pb2, net, container
 
 PROCESSOR_SPEED = 3_400_000_000_000 #3.4GHz
@@ -174,6 +174,7 @@ def main():
                 thread.start()
     except Exception:
         print("test")
+        os._exit(-1)
 
 if __name__ == "__main__":
     main()
