@@ -3,15 +3,6 @@ from lib import edge_pb2, net
 
 access_server_address = ("10.45.1.34", 2004)
 
-def createTask(taskID: int, input: bytes, deadline_ms: int, inputID: int):
-    task = edge_pb2.Task()
-    task.taskID = taskID
-    task.input = input
-    task.deadline_ms = deadline_ms
-    task.inputID = inputID
-
-    return task
-
 def submitTask(task) -> edge_pb2.Response:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(access_server_address)
@@ -39,7 +30,7 @@ def main():
             payload = json.dumps({"a": a, "b": b}).encode()
 
             input_id = random.randint(10000,9999999)
-            task = createTask(0, payload, 1000, input_id)
+            task = net.createTask(0, payload, 1000, input_id)
 
             print()
             print("Submitted Task --------------------------------")
@@ -94,5 +85,5 @@ def main():
         
 
 if __name__ == "__main__":
-    for i in range(47):
+    for i in range(100):
         thread = threading.Thread(target=main).start()

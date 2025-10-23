@@ -168,7 +168,7 @@ def main():
     heartbeatSender()
 
     try:
-        with container.ContainerPool("task_sandbox", 1, 50) as container_pool:
+        with container.ContainerPool("task_sandbox", 1, 500) as container_pool:
             while True:
                 sock, addr = server.accept()
                 sock.settimeout(2)

@@ -19,6 +19,15 @@ def createResponse(success: bool, value: bytes):
 
     return response
 
+def createTask(taskID: int, input: bytes, deadline_ms: int, inputID: int):
+    task = edge_pb2.Task()
+    task.taskID = taskID
+    task.input = input
+    task.deadline_ms = deadline_ms
+    task.inputID = inputID
+
+    return task
+
 def send(sock, header, data):
     header.messageLength = len(data)
 

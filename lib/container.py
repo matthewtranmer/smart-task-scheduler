@@ -1,4 +1,3 @@
-import sys
 import docker, socket, random, os
 from docker.types import LogConfig
 import threading
@@ -59,11 +58,11 @@ class Container:
 
     def receive(self) -> tuple[str, bool]:
         header, payload = self._recv()
-        print(f"Receveing len:{len(payload)}, payload: {payload}", file=sys.stderr)
+        print(f"Receveing len:{len(payload)}, payload: {payload}")
 
         if (len(payload) == 0):
             print("-----HEADER-----------------------------------------------------------:")
-            print(header, file=sys.stderr)
+            print(header)
 
         if (header == None):
             return (payload, False)
