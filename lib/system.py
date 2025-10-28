@@ -1,4 +1,5 @@
 import glob
+import psutil
 
 # Return a list of logical CPU IDs, one per physical core,
 # by taking the first sibling from each core's thread_siblings_list
@@ -29,15 +30,6 @@ def getPhysicalCpuIds():
 
     return first_siblings
 
-
-# Returns the amount of system memory in KiB
-def getSystemMemoryKB():
-    with open("/proc/meminfo") as f:
-        for line in f:
-            if line.startswith("MemTotal:"):
-                # Example line: "MemTotal:       32751404 kB"
-                return int(line.split()[1]) 
-            
 # Returns the amount of system memory in MiB
 def getSystemMemoryMB():
-    return getSystemMemoryKB() // 1024
+    return psutil.virtual_memory().total // 1024 // 1024

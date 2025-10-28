@@ -8,6 +8,7 @@ httptools==0.6.4
 idna==3.10
 MarkupSafe==3.0.2
 protobuf==6.32.1
+psutil==7.1.2
 pydantic==2.11.9
 pydantic_core==2.33.2
 requests==2.32.5
