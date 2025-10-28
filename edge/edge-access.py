@@ -119,7 +119,7 @@ class EdgeAccess:
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
     def calculateDeadlineHit(self,raw_payload, processing_time, diagnostics):
-        task = net.createTask(0, b"", 0, 0)
+        task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
 
         if (processing_time * 1000 < task.deadline_ms):
@@ -129,15 +129,17 @@ class EdgeAccess:
 
     # Called when a task is submitted to the access server by a client.
     def scheduleTask(self, header, raw_payload, diagnostics):
+        task = edge_pb2.Task()
+        task.ParseFromString(raw_payload)
+        memory_mb = task.memory_requirement_mb
+
         for _ in range(100):
-            MEMORY = 56
-            
             try:
-                edge_address = self.scheduler.schedule(memory_mb=MEMORY)
+                edge_address = self.scheduler.schedule(memory_mb=memory_mb)
             except s.NoNodesExeception:
-                return net.createResponse(False, b"There are no avaiable clients to perform the task").SerializeToString()
-            except s.NodeResourceExecpetion:
-                return net.createResponse(False, b"There are no nodes with enough resources available to perform the task").SerializeToString()
+                return net.createResponse(False, b"There are no available clients to perform the task").SerializeToString()
+            except s.NodeResourceExecpetion as e:
+                return net.createResponse(False, e.__str__().encode()).SerializeToString()
 
             self.logger.debug(f"Scheduled task on node {edge_address}")
 
@@ -156,6 +158,8 @@ class EdgeAccess:
                 # TODO: Unsafe - node could be removed by other routine checking for heartbeats
                 # during critical section
                 self.scheduler.removeNode(edge_address)
+            except Exception as e:
+                traceback.print_exc()
 
         try:
             start = time.perf_counter()
@@ -163,8 +167,6 @@ class EdgeAccess:
             
             _, response = net.recv(edge_connection)
             end = time.perf_counter()
-
-            self.scheduler.resetNode(edge_address, MEMORY)
 
             processing_time = end - start
 
@@ -174,6 +176,8 @@ class EdgeAccess:
             return response
         except TimeoutError:
             return net.createResponse(False, b"Edge node timedout").SerializeToString()
+        finally:
+            self.scheduler.resetNode(edge_address, memory_mb)
 
     # Called when an edge client sends a heartbeat signal. Sets the client's 
     # has timed out flag to false. 

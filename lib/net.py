@@ -19,10 +19,11 @@ def createResponse(success: bool, value: bytes):
 
     return response
 
-def createTask(taskID: int, input: bytes, deadline_ms: int, inputID: int):
+def createTask(taskID: int, input: bytes, memory_requirement_mb: int, deadline_ms: int, inputID: int):
     task = edge_pb2.Task()
     task.taskID = taskID
     task.input = input
+    task.memory_requirement_mb = memory_requirement_mb
     task.deadline_ms = deadline_ms
     task.inputID = inputID
 

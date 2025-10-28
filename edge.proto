@@ -9,8 +9,9 @@ message Header {
 message Task {
     int32 taskID = 1;
     bytes input = 2;
-    int32 deadline_ms = 3;
-    int32 inputID = 4;
+    int32 memory_requirement_mb = 3;
+    int32 deadline_ms = 4;
+    int32 inputID = 5;
 }
 
 message Registration {

@@ -1,6 +1,7 @@
 class NoNodesExeception(Exception):
     def __init__(self, message):
         super().__init__(message)
+        self.message = message
 
     def __str__(self):
         return f"{self.message}"
@@ -8,6 +9,7 @@ class NoNodesExeception(Exception):
 class NodeResourceExecpetion(Exception):
     def __init__(self, message):
         super().__init__(message)
+        self.message = message
 
     def __str__(self):
         return f"{self.message}"
@@ -56,6 +58,7 @@ class Scheduler:
 
     def removeNode(self, address):
         node_index = self._findNodeIndex(address)
+        print(f"removing node at index {node_index} --------------------------------------------------------")
         self.nodes.pop(node_index) 
 
     # Returns addresses of dead nodes
@@ -90,12 +93,21 @@ class RoundRobin(Scheduler):
 class RoundRobinWithAllocation(Scheduler):
     def schedule(self, memory_mb):
         if (len(self.nodes) <= 0):
-            raise NoNodesExeception("There are no nodes avaiable to perform the task")
+            raise NoNodesExeception("There are no nodes available to perform the task")
 
         start_index = self.index
 
+        foundNodeWithCPU = False
+        foundNodeWithMemory = False
         while True:
             scheduled_node = None
+
+            if self.nodes[self.index]["cpus_available"] > 0:
+                foundNodeWithCPU = True
+
+            if self.nodes[self.index]["memory_available"] > memory_mb:
+                foundNodeWithMemory = True
+
             if self.nodes[self.index]["cpus_available"] > 0 and self.nodes[self.index]["memory_available"] > memory_mb:
                 scheduled_node = self.nodes[self.index]
 
@@ -110,7 +122,16 @@ class RoundRobinWithAllocation(Scheduler):
                 return scheduled_node["address"]
 
             if self.index == start_index:
-                raise NodeResourceExecpetion("There are no nodes with enough resources available")
+                # Couldnt find a node with either enough cpu and memory
+                if not foundNodeWithCPU and not foundNodeWithMemory:
+                    raise NodeResourceExecpetion("There are no nodes with enough resources available")
+                # Found a node with enough memory - but not enough CPU
+                elif foundNodeWithMemory:
+                    raise NodeResourceExecpetion("There are no nodes with enough CPU available")
+                # Found a node with enough CPU - but not enough memory
+                else:
+                    raise NodeResourceExecpetion("There are no nodes with enough memory available")
+
 
     def resetNode(self, address, memory_mb):
         node_index = self._findNodeIndex(address)

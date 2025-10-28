@@ -30,7 +30,14 @@ def main():
             payload = json.dumps({"a": a, "b": b}).encode()
 
             input_id = random.randint(10000,9999999)
-            task = net.createTask(0, payload, 1000, input_id)
+
+            task = net.createTask(
+                taskID=0,
+                input=payload,
+                memory_requirement_mb=200,
+                deadline_ms=1000,
+                inputID=input_id
+            )
 
             print()
             print("Submitted Task --------------------------------")
