@@ -34,7 +34,7 @@ def main():
             task = net.createTask(
                 taskID=0,
                 input=payload,
-                memory_requirement_mb=200,
+                memory_requirement_mb=300,
                 deadline_ms=1000,
                 inputID=input_id
             )
@@ -91,5 +91,5 @@ def main():
         
 
 if __name__ == "__main__":
-    for i in range(16):
+    for i in range(25):
         thread = threading.Thread(target=main).start()

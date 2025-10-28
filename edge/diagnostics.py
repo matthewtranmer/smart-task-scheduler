@@ -31,13 +31,14 @@ class Diagnostics:
         self._calculateAverageProcessingTimes()
         self._calculateTasksPerSecond()
         self._calculateDeadlineHitRate()
+        self.scheduler.calculateResourceUsage(self.measurement_interval_s)
         
         threading.Timer(self.measurement_interval_s, self._mainLoop).start()
 
     def addJob(self, task_id, address, processing_time_ms, deadline_ms, deadline_hit):
         self.job_history.append({
             "name": s.Tasks.getName(task_id),
-            "assigned_node": self.scheduler.getNodeID(address),
+            "assigned_node": f"edge-{self.scheduler.getNodeID(address)}",
             "processing_time": round(processing_time_ms, 3),
             "deadline": deadline_ms,
             "deadline_hit": deadline_hit
@@ -127,9 +128,9 @@ class Diagnostics:
                 "name": f"edge-{node["id"]}",
                 "ip": node["address"][0],
                 "port":node["address"][1],
-                "assigned_tasks": 0,
-                "cpu": 0,
-                "memory": 0
+                "assigned_tasks": node["assigned_tasks"],
+                "cpu": node["cpu_usage"],
+                "memory": round((node["memory"] - node["memory_available"]) / node["memory"] * 100, 2)
             }
 
             online_nodes.append(data)
@@ -138,7 +139,7 @@ class Diagnostics:
         for task_id in self.task_processing_times:
             data = {}
 
-            data["name"] = s.Tasks.getName(task_id)
+            data["name"] = f"{s.Tasks.getName(task_id)}"
             data["processing_time"] = self.task_processing_times[task_id]["average_processing_time"]
 
             task_averages.append(data)

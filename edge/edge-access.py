@@ -69,6 +69,7 @@ class EdgeAccess:
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
         memory_mb = task.memory_requirement_mb
+        processing_time = 0
 
         for _ in range(100):
             try:
@@ -115,7 +116,7 @@ class EdgeAccess:
         except TimeoutError:
             return net.createResponse(False, b"Edge node timedout").SerializeToString()
         finally:
-            self.scheduler.resetNode(edge_address, memory_mb)
+            self.scheduler.resetNode(edge_address, memory_mb, processing_time*1000)
 
     # Called when an edge client sends a heartbeat signal. Sets the client's 
     # has timed out flag to false. 

@@ -79,6 +79,10 @@ class EdgeClient:
         response = edge_pb2.Response()
         response.ParseFromString(response_bytes)
 
+        # Re-register node if not registered
+        if (not response.success and response.value == b"Edge node does not exist!"):
+            self.registerNode()
+
         print(response)
 
     # Register the node as alive with the access server

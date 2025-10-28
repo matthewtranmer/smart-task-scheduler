@@ -46,7 +46,10 @@ class Scheduler:
             "cpus_available": cpus,
             "memory_available": memory_mb,
             "timed_out": False,
-            "id":self.next_id
+            "id":self.next_id,
+            "cpu_time_ms": 0,
+            "cpu_usage": 0,
+            "assigned_tasks": 0
         }
 
         try:
@@ -136,7 +139,8 @@ class RoundRobinWithAllocation(Scheduler):
 
                 scheduled_node["cpus_available"] -= 1
                 scheduled_node["memory_available"] -= memory_mb
-            
+                scheduled_node["assigned_tasks"] += 1
+
             self.index += 1
             if (self.index >= len(self.nodes)):
                 self.index = 0
@@ -155,14 +159,24 @@ class RoundRobinWithAllocation(Scheduler):
                 else:
                     raise NodeResourceExecpetion("There are no nodes with enough memory available")
 
-
-    def resetNode(self, address, memory_mb):
+    def resetNode(self, address, memory_mb, processing_time_ms):
         node_index = self._findNodeIndex(address)
 
         self.nodes[node_index]["cpus_available"] += 1
         self.nodes[node_index]["memory_available"] += memory_mb
-        
+        self.nodes[node_index]["cpu_time_ms"] += processing_time_ms
+        self.nodes[node_index]["assigned_tasks"] -= 1
 
+    def calculateResourceUsage(self, sample_time_s) -> list:
+        for node in self.nodes:
+            cpu_time_per_second = node["cpu_time_ms"] // sample_time_s
+            available_processing_time = node["cpus"] * 1000
+
+            cpu_usage_percent = min(cpu_time_per_second / available_processing_time * 100, 100)
+            cpu_usage_percent = round(cpu_usage_percent, 2)
+
+            node["cpu_time_ms"] = 0
+            node["cpu_usage"] = cpu_usage_percent
 
 
 
