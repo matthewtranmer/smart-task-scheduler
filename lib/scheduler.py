@@ -13,10 +13,25 @@ class NodeResourceExecpetion(Exception):
 
     def __str__(self):
         return f"{self.message}"
+    
+class Tasks():
+    ADDITION = 0
+    MULTIPLICATION = 1
+    DIVISION = 2
+
+    def getName(task_id):
+        match task_id:
+            case 0:
+                return "Addition"
+            case 1:
+                return "Multiplication"
+            case 2:
+                return "Division"
 
 class Scheduler:
     index = 0
     nodes = []
+    next_id = 0
 
     def schedule(self):
         raise NotImplementedError
@@ -30,16 +45,17 @@ class Scheduler:
             "memory": memory_mb,
             "cpus_available": cpus,
             "memory_available": memory_mb,
-            "timed_out": False
+            "timed_out": False,
+            "id":self.next_id
         }
 
         try:
             self._findNodeIndex(address)
             #Node must already exist
             return False
-        
         except KeyError:
             self.nodes.append(node)
+            self.next_id += 1
             return True
 
     def _findNodeIndex(self, address):
@@ -76,6 +92,13 @@ class Scheduler:
             index += 1
 
         return nodes_removed
+    
+    def getNodes(self):
+        return self.nodes
+    
+    def getNodeID(self, address):
+        index = self._findNodeIndex(address)
+        return self.nodes[index]["id"]
 
 class RoundRobin(Scheduler):
     def schedule(self) -> tuple[str, int]:

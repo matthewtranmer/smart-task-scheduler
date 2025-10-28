@@ -1,81 +1,8 @@
-import socket, threading, logging, traceback, time
+import socket, threading, logging, traceback, time, json
 from lib import edge_pb2, net
 from lib import scheduler as s
+from diagnostics import Diagnostics
 
-class Diagnostics:
-    measurement_interval_s = 0
-
-    task_count = 0
-    tasks_per_second = 0
-
-    processing_times = 0
-    processing_times_count = 0
-    average_processing_time = 0
-
-    deadline_hit_rate = 0
-    deadline_misses = 0
-    deadline_hits = 0
-
-    def __init__(self, measurement_interval_s, display=False):
-        self.display = display
-        self.measurement_interval_s = measurement_interval_s
-        self._mainLoop()
-
-    def _mainLoop(self):
-        self._calculateAverageProcessingTimes()
-        self._calculateTasksPerSecond()
-        self._calculateDeadlineHitRate()
-        
-        threading.Timer(self.measurement_interval_s, self._mainLoop).start()
-
-    def _calculateDeadlineHitRate(self):
-        task_count = self.deadline_misses + self.deadline_hits
-        if task_count == 0:
-            self.deadline_hit_rate = 0
-        else:
-            self.deadline_hit_rate = round((self.deadline_hits / task_count) * 100, 3)
-
-        self.deadline_hits = 0
-        self.deadline_misses = 0
-
-        if (self.display):
-            print(f"Deadline hit rate: {self.deadline_hit_rate}%")
-
-    def _calculateAverageProcessingTimes(self):
-        if (self.processing_times_count == 0):
-            self.average_processing_time = 0
-        else:
-            self.average_processing_time = round(self.processing_times / self.processing_times_count, 3)
-        
-        self.processing_times = 0
-        self.processing_times_count = 0
-
-        if (self.display):
-            print(f"Average processing time: {self.average_processing_time}")
-
-    # Called every task_measurement_interval_s
-    def _calculateTasksPerSecond(self):
-        self.tasks_per_second = round(self.task_count / self.measurement_interval_s, 3)
-        self.task_count = 0
-
-        if (self.display):
-            print(f"Tasks per second: {self.tasks_per_second}")
-
-    def incrementTasks(self, count=1):
-        self.task_count += count
-
-    def tasksPerSecond(self) -> int:
-        return self.tasks_per_second
-    
-    def incrementProcessingTime(self, processing_time):
-        self.processing_times += processing_time
-        self.processing_times_count += 1
-
-    def addDeadlineTask(self, did_hit_deadline: bool):
-        if (did_hit_deadline):
-            self.deadline_hits += 1
-        else:
-            self.deadline_misses += 1
     
 class EdgeAccess:
     heartbeat_timeout_s = 30
@@ -108,6 +35,13 @@ class EdgeAccess:
 
             threading.Thread(target=self.handleRequest, args=(sock, addr)).start()
 
+    def gatherDiagnostics(self):
+        data = self.diagnostics.sampleAllDiagnosticData()
+        json_data = json.dumps(data)
+
+        return net.createResponse(True, json_data.encode()).SerializeToString()
+
+
     # Scan through all edge clients. If the client has timed out flag set to true then 
     # remove it from the clients list. If the client hasn't timed out, set the flag so 
     # that it has timed out. The heartbeat function will reset the flag so that it is 
@@ -118,14 +52,17 @@ class EdgeAccess:
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
-    def calculateDeadlineHit(self,raw_payload, processing_time, diagnostics):
+    #Returns true on deadline hit, false on deadline miss
+    def calculateDeadlineHit(self,raw_payload, processing_time, diagnostics) -> bool:
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
 
         if (processing_time * 1000 < task.deadline_ms):
             diagnostics.addDeadlineTask(True)
-        else:
-            diagnostics.addDeadlineTask(False)
+            return True
+        
+        diagnostics.addDeadlineTask(False)
+        return False
 
     # Called when a task is submitted to the access server by a client.
     def scheduleTask(self, header, raw_payload, diagnostics):
@@ -170,8 +107,9 @@ class EdgeAccess:
 
             processing_time = end - start
 
-            diagnostics.incrementProcessingTime(processing_time)
-            self.calculateDeadlineHit(raw_payload, processing_time, diagnostics)
+            diagnostics.incrementProcessingTime(processing_time, task.taskID)
+            deadline_hit = self.calculateDeadlineHit(raw_payload, processing_time, diagnostics)
+            self.diagnostics.addJob(task.taskID, (ip, port), processing_time*1000, task.deadline_ms, deadline_hit)
 
             return response
         except TimeoutError:
@@ -234,6 +172,8 @@ class EdgeAccess:
             # Edge node registration
             case net.Commands.REGISTRATION:
                 response = self.edgeNodeRegistration(raw_payload)
+            case net.Commands.GATHER_DIAGNOSTICS:
+                response = self.gatherDiagnostics()
 
         header = net.createHeader(parsed_header.commandID)
         net.send(sock, header, response)
@@ -249,7 +189,12 @@ def main():
 
     scheduler = s.RoundRobinWithAllocation()
     logger = logging.getLogger(__name__)
-    diagnostics = Diagnostics(4, True)
+    
+    diagnostics = Diagnostics(
+        measurement_interval_s=4,
+        scheduler=scheduler, 
+        display=True
+    )
 
     access_server = EdgeAccess(
         scheduler=scheduler,

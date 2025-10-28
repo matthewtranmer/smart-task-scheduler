@@ -1,0 +1,31 @@
+Data points:
+    Task arival rate (current + graph)
+    Deadline hit rate (current + graph)
+    Average processing time (current + graph)
+
+    List of online nodes (Node name, Assigned Tasks, CPU%, Memory%)
+    List of tasks the system can run (Task name, average processing time)
+
+
+The edge access server will host an API. The flask web server will contact The
+API every x seconds and will cache the data. The web server will then display this data
+
+API endpoint /api/gatherDiagnosticData:
+    task arival rate
+    deadline hit rate
+    global average processing time
+    List of online nodes
+        Node name
+        Assigned tasks
+        CPU% 
+        Memory%
+    List of tasks:
+        Task name
+        Average processing time
+    List of x recent jobs:
+        Task name
+        Node 
+        Processing time
+        Deadline
+
+

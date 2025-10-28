@@ -5,6 +5,7 @@ class Commands():
     SCHEDULE_TASK = 1
     HEARTBEAT = 2
     REGISTRATION = 3
+    GATHER_DIAGNOSTICS = 4
 
 def createHeader(commandID):
     header = edge_pb2.Header()
