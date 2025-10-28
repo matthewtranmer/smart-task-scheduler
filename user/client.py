@@ -60,9 +60,8 @@ def main():
                 print(e)
 
             if (response.success == False):
-                for _ in range(100):
-                    print(json_response)
-                    
+                print(json_response)
+                time.sleep(0.3)
                 continue
 
             result = int(parsed_response["value"])
@@ -85,5 +84,5 @@ def main():
         
 
 if __name__ == "__main__":
-    for i in range(10):
+    for i in range(16):
         thread = threading.Thread(target=main).start()

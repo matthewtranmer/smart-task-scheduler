@@ -1,6 +1,6 @@
 import socket, threading, logging, traceback, time
 from lib import edge_pb2, net
-from lib.scheduler import Scheduler
+from lib import scheduler as s
 
 class Diagnostics:
     measurement_interval_s = 0
@@ -78,11 +78,10 @@ class Diagnostics:
             self.deadline_misses += 1
     
 class EdgeAccess:
-    edge_clients = []
     heartbeat_timeout_s = 30
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def __init__(self, scheduler, logger, diagnostics, ip=None, port=2004):
+    def __init__(self, scheduler: s.Scheduler, logger, diagnostics, ip=None, port=2004):
         self.scheduler = scheduler
         self.logger = logger
         self.diagnostics = diagnostics
@@ -109,35 +108,13 @@ class EdgeAccess:
 
             threading.Thread(target=self.handleRequest, args=(sock, addr)).start()
 
-        # Find the index of the edge client by its address. Returns -1 on failure
-    def searchEdgeClients(self, addr):
-        index = 0
-        for client in self.edge_clients:
-            if (client["IP"] == addr[0] and client["port"] == addr[1]):
-                return index
-            
-            index += 1
-
-        return -1
-
     # Scan through all edge clients. If the client has timed out flag set to true then 
     # remove it from the clients list. If the client hasn't timed out, set the flag so 
     # that it has timed out. The heartbeat function will reset the flag so that it is 
     # not removed on the next pass.
     # Reinvoked asynchronously every heartbeat_timeout_s
     def removeDeadClients(self):
-        self.logger.debug(self.edge_clients)
-
-        index = 0
-        for client in self.edge_clients:
-            if (client["has_timed_out"] == True):
-                self.logger.info(f"Removed dead client {client} at index {index}")
-                self.edge_clients.pop(index)
-            else:
-                client["has_timed_out"] = True
-
-            index += 1
-        self.logger.debug(self.edge_clients)
+        self.scheduler.removeDeadNodes()
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
@@ -153,29 +130,32 @@ class EdgeAccess:
     # Called when a task is submitted to the access server by a client.
     def scheduleTask(self, header, raw_payload, diagnostics):
         for _ in range(100):
-            scheduled_index = self.scheduler.schedule(self.edge_clients)
-            if (scheduled_index == -1):
-                return net.createResponse(False, b"There are no avaiable clients to perform the task").SerializeToString()
-
-            scheduled_node = self.edge_clients[scheduled_index]
-            ip = scheduled_node["IP"]
-            port = scheduled_node["port"]
+            MEMORY = 56
             
-            self.logger.debug(f"Scheduled task on node {scheduled_node}")
+            try:
+                edge_address = self.scheduler.schedule(memory_mb=MEMORY)
+            except s.NoNodesExeception:
+                return net.createResponse(False, b"There are no avaiable clients to perform the task").SerializeToString()
+            except s.NodeResourceExecpetion:
+                return net.createResponse(False, b"There are no nodes with enough resources available to perform the task").SerializeToString()
+
+            self.logger.debug(f"Scheduled task on node {edge_address}")
 
             edge_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             edge_connection.settimeout(3)
+
+            ip = edge_address[0]
+            port = edge_address[1]
 
             try:
                 edge_connection.connect((ip, port))
                 break
             except (ConnectionRefusedError, TimeoutError):
                 self.logger.warning(f"Node {ip}:{port} is not responding! Removing from registry")
+
                 # TODO: Unsafe - node could be removed by other routine checking for heartbeats
                 # during critical section
-                index = self.searchEdgeClients((ip, port))
-                if (index != -1):
-                    self.edge_clients.pop(index)
+                self.scheduler.removeNode(edge_address)
 
         try:
             start = time.perf_counter()
@@ -183,6 +163,8 @@ class EdgeAccess:
             
             _, response = net.recv(edge_connection)
             end = time.perf_counter()
+
+            self.scheduler.resetNode(edge_address, MEMORY)
 
             processing_time = end - start
 
@@ -204,13 +186,17 @@ class EdgeAccess:
 
         self.logger.info(f"Received heartbeat from {ip}:{port}")
 
-        index = self.searchEdgeClients((ip, port))
-        if index != -1:
-            self.edge_clients[index]["has_timed_out"] = False
+        # index = self.searchEdgeClients((ip, port))
+        # if index != -1:
+        #     self.edge_clients[index]["has_timed_out"] = False
             
-            return net.createResponse(True, b"Success").SerializeToString()
+        #     return net.createResponse(True, b"Success").SerializeToString()
         
-        return net.createResponse(False, b"Edge node does not exist!").SerializeToString()
+        try:
+            self.scheduler.nodeHeartbeat((ip, port))
+            return net.createResponse(True, b"Success").SerializeToString()
+        except KeyError:
+            return net.createResponse(False, b"Edge node does not exist!").SerializeToString()
 
     # Registers an edge client as alive. Adds its IP, port and its timed out flag
     # to the list of edge clients.
@@ -221,17 +207,9 @@ class EdgeAccess:
         ip = socket.inet_ntop(socket.AF_INET, registration.IP)
         port = registration.port
 
-        # Ensure client isn't already registered
-        index = self.searchEdgeClients((ip, port))
-        if index != -1:
+        added_node = self.scheduler.addNode((ip, port), registration.cpus, registration.memory_mb)
+        if not added_node:
             return net.createResponse(False, b"Client already exists in the registry!")
-
-        # Add client to the registry
-        self.edge_clients.append({
-            "IP": ip,
-            "port": port,
-            "has_timed_out": False
-        })
 
         self.logger.info(f"Regstering node {ip}:{port}")
 
@@ -265,7 +243,7 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    scheduler = Scheduler()
+    scheduler = s.RoundRobinWithAllocation()
     logger = logging.getLogger(__name__)
     diagnostics = Diagnostics(4, True)
 

@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nedge.proto\x12\x04\x65\x64ge\"2\n\x06Header\x12\x15\n\rmessageLength\x18\x01 \x01(\x05\x12\x11\n\tcommandID\x18\x02 \x01(\x05\"K\n\x04Task\x12\x0e\n\x06taskID\x18\x01 \x01(\x05\x12\r\n\x05input\x18\x02 \x01(\x0c\x12\x13\n\x0b\x64\x65\x61\x64line_ms\x18\x03 \x01(\x05\x12\x0f\n\x07inputID\x18\x04 \x01(\x05\"(\n\x0cRegistration\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\"%\n\tHeartbeat\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\"8\n\x08Response\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0c\n\x04\x63ode\x18\x02 \x01(\x05\x12\r\n\x05value\x18\x03 \x01(\x0c\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nedge.proto\x12\x04\x65\x64ge\"2\n\x06Header\x12\x15\n\rmessageLength\x18\x01 \x01(\x05\x12\x11\n\tcommandID\x18\x02 \x01(\x05\"K\n\x04Task\x12\x0e\n\x06taskID\x18\x01 \x01(\x05\x12\r\n\x05input\x18\x02 \x01(\x0c\x12\x13\n\x0b\x64\x65\x61\x64line_ms\x18\x03 \x01(\x05\x12\x0f\n\x07inputID\x18\x04 \x01(\x05\"I\n\x0cRegistration\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\x12\x0c\n\x04\x63pus\x18\x03 \x01(\x05\x12\x11\n\tmemory_mb\x18\x04 \x01(\x05\"%\n\tHeartbeat\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\"8\n\x08Response\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0c\n\x04\x63ode\x18\x02 \x01(\x05\x12\r\n\x05value\x18\x03 \x01(\x0c\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'edge_pb2', globals())
@@ -25,9 +25,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _TASK._serialized_start=72
   _TASK._serialized_end=147
   _REGISTRATION._serialized_start=149
-  _REGISTRATION._serialized_end=189
-  _HEARTBEAT._serialized_start=191
-  _HEARTBEAT._serialized_end=228
-  _RESPONSE._serialized_start=230
-  _RESPONSE._serialized_end=286
+  _REGISTRATION._serialized_end=222
+  _HEARTBEAT._serialized_start=224
+  _HEARTBEAT._serialized_end=261
+  _RESPONSE._serialized_start=263
+  _RESPONSE._serialized_end=319
 # @@protoc_insertion_point(module_scope)

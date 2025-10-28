@@ -3,10 +3,17 @@ from docker.types import LogConfig
 import threading
 import time
 
+class NoContainersExeception(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+    def __str__(self):
+        return f"{self.message}"
+
 class Container:
     client = docker.from_env()
 
-    def __init__(self, image):
+    def __init__(self, image, cpuset_cpus=None):
         self.container = self.client.containers.create(
             image,
             tty=False,
@@ -16,7 +23,8 @@ class Container:
             cap_add=["SYS_NICE"],
             user="root", # Danger - change in prod
             detach=True,
-            read_only=True,              
+            read_only=True,    
+            cpuset_cpus=cpuset_cpus
         )
 
         self.containerID = self.container.id
@@ -47,7 +55,6 @@ class Container:
 
     def _recv(self) -> tuple[dict, bytes]:
         header = self.sock._sock.recv(8)
-        print(f"Header length: {len(header)}")
         if (len(header) < 8):
             raise EOFError(f"Container {self.containerID} closed output stream")
         
@@ -58,11 +65,6 @@ class Container:
 
     def receive(self) -> tuple[str, bool]:
         header, payload = self._recv()
-        print(f"Receveing len:{len(payload)}, payload: {payload}")
-
-        if (len(payload) == 0):
-            print("-----HEADER-----------------------------------------------------------:")
-            print(header)
 
         if (header == None):
             return (payload, False)
@@ -125,8 +127,6 @@ class ContainerPool:
         if (self.assigned_containers <= self.max_container_count):
             self.assigned_containers += 1
 
-        print(f"Assigned containers: {self.assigned_containers}")
-
         short_lived = False
         if (len(self.containers) <= 0):
             if (self.assigned_containers > self.max_container_count):
@@ -145,8 +145,6 @@ class ContainerPool:
         return PoolContainer(self, new_container, short_lived)
     
     def releaseContainer(self, pool_container: PoolContainer):
-        print("Releasing container")
-
         # One off container
         if (pool_container.short_lived == True):
             print("Short lived, killing")
@@ -166,3 +164,25 @@ class ContainerPool:
 
         for cont in self.containers:
             cont.kill()
+
+class StaticContainerPool(ContainerPool):
+    def __init__(self, image, cpu_ids):
+        self.image = image
+
+        for id in cpu_ids:
+            new_container = Container(image=image, cpuset_cpus=str(id))
+            self.containers.append(new_container)
+
+    def getContainer(self):
+        with self.lock:
+            self.assigned_containers += 1
+
+            if (len(self.containers) > 0):
+                # Get container from pool
+                new_container = self.containers.pop(0)
+         
+                return PoolContainer(self, new_container, short_lived=False)
+            
+        raise NoContainersExeception("All available containers are in use")
+        
+            

@@ -16,6 +16,8 @@ message Task {
 message Registration {
     bytes IP = 1;
     uint32 port = 2;
+    int32 cpus = 3;
+    int32 memory_mb = 4;
 }
 
 message Heartbeat {
