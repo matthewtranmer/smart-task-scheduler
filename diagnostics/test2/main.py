@@ -1,4 +1,4 @@
-import socket, json, pprint, os
+import socket, json, pprint, os, sys
 from flask import Flask, render_template
 from lib import net, edge_pb2
 
@@ -32,5 +32,15 @@ def gatherDiagnostics() -> dict:
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "5000"))
+    address = None
+    if len(sys.argv) > 1:
+        address = sys.argv[1]
+        address = address.split(":")
+        address[1] = int(address[1])
+        address = tuple(address)
+
+    if address != None:
+        access_server_address = address
+
+    port = int(os.getenv("PORT", "8000"))
     app.run(host="0.0.0.0", port=port, debug=os.getenv("FLASK_ENV") == "development")

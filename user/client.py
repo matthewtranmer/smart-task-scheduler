@@ -1,4 +1,4 @@
-import socket, time, threading, json, random, os, traceback
+import socket, time, threading, json, random, os, traceback, sys
 from lib import edge_pb2, net
 
 access_server_address = ("10.45.1.34", 2004)
@@ -91,5 +91,20 @@ def main():
         
 
 if __name__ == "__main__":
-    for i in range(25):
+    address = None
+    threads = 1
+
+    if len(sys.argv) > 1:
+        threads = int(sys.argv[1])
+
+    if len(sys.argv) > 2:
+        address = sys.argv[2]
+        address = address.split(":")
+        address[1] = int(address[1])
+        address = tuple(address)
+
+    if address != None:
+        access_server_address = address
+
+    for i in range(threads):
         thread = threading.Thread(target=main).start()
