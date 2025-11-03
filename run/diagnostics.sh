@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." >/dev/null && pwd)"
-SCRIPT="$ROOT/diagnostics/test2/main.py"
+SCRIPT="$ROOT/src/diagnostics/main.py"
 
 export PYTHONPATH="$ROOT"
 cd "$ROOT"
