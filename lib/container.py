@@ -21,14 +21,14 @@ class Container:
             stdin_open=True,
             auto_remove=True,
             network_disabled=True,
-            cap_add=["SYS_NICE"],
-            user="root", # Danger - change in prod
             detach=True,
             read_only=True,    
-            cpuset_cpus=cpuset_cpus
+            cpuset_cpus=cpuset_cpus,
         )
 
         self.containerID = self.container.id
+        self.image = image
+        self.cpuset_cpus = cpuset_cpus
 
         self.container.start()
 
@@ -37,6 +37,13 @@ class Container:
 
     def getContainer(self):
         return self.container
+    
+    def setMemoryLimit(self, memory_bytes: int):
+        self.client.api.update_container(
+            self.containerID,
+            mem_limit=memory_bytes,
+            memswap_limit=memory_bytes
+        )
 
     def send(self, data: bytes):
         self.sock._sock.sendall(data + b"\n")
@@ -122,7 +129,7 @@ class ContainerPool:
             new_container = Container(image=image)
             self.containers.append(new_container)
 
-    def getContainer(self):
+    def getContainer(self, memory):
         self.lock.acquire()
 
         if (self.assigned_containers <= self.max_container_count):
@@ -143,17 +150,40 @@ class ContainerPool:
             new_container = self.containers.pop(0) 
 
         self.lock.release()
-        return PoolContainer(self, new_container, short_lived)
+
+        return PoolContainer(self, new_container, short_lived, memory)
     
     def releaseContainer(self, pool_container: PoolContainer):
+        container_id = pool_container.container.containerID
+        
+        restart_container = False
+        try:
+            container = pool_container.container.client.containers.get(container_id)
+            if container.status != "running":
+                restart_container = True
+
+        except docker.errors.NotFound:
+            restart_container = True            
+
         # One off container
-        if (pool_container.short_lived == True):
+        if (pool_container.short_lived and restart_container):
+            return
+        
+        if (pool_container.short_lived):
             print("Short lived, killing")
             pool_container.container.kill()
             return
+        
+        container = pool_container.container
+        
+        if restart_container:
+            container = Container(
+                image=pool_container.container.image,
+                cpuset_cpus=pool_container.container.cpuset_cpus
+            )
 
         self.lock.acquire()
-        self.containers.append(pool_container.container)
+        self.containers.append(container)
         self.assigned_containers -= 1
         self.lock.release()
 
