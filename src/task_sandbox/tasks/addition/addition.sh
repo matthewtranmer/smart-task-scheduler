@@ -1,1 +1,0 @@
-exec "python3" "/app/tasks/addition/addition.py" "$1"

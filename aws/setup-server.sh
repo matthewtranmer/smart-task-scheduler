@@ -46,3 +46,4 @@ python3 -m venv "$APP_DIR/env"
 pip3 install -r "$APP_DIR/requirements.txt"
 
 # Start server
+./$APP_DIR/run/task-server
