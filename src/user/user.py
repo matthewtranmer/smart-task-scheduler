@@ -19,7 +19,7 @@ class TaskOffloader:
         return self._submitTask(task)
 
     def classifyFruit(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": image_bytes}).encode()
+        payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
 
         task = net.createTask(
             taskID=net.Tasks.CLASSIFY_FRUIT,
@@ -32,7 +32,7 @@ class TaskOffloader:
         return self._submitTask(task)
 
     def fruitQuality(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": image_bytes}).encode()
+        payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
 
         task = net.createTask(
             taskID=net.Tasks.FRUIT_QUALITY,
@@ -141,9 +141,11 @@ def main(address):
             b = random.randint(1, 99)
 
             start_time = time.perf_counter()
+
             # response = offloader.addition(a, b, deadline)
-            
-            response = offloader.detectHuman(image_bytes, deadline)
+            # response = offloader.detectHuman(image_bytes, deadline)
+            # response = offloader.classifyFruit(image_bytes, deadline)
+            response = offloader.fruitQuality(image_bytes, deadline)
 
             end_time = time.perf_counter()
 
@@ -152,7 +154,7 @@ def main(address):
             print(f"Time Elapsed {time_elapsed}")
             print(f"Response {response}")
 
-            
+            break
 
     except Exception as e:
         print("CLIENT SIDE EXECEPTION")

@@ -9,6 +9,7 @@ from contextlib import redirect_stdout, redirect_stderr
 import multiprocessing as mp
 
 def imageContainsHuman(image: np.ndarray) -> bool:
+    # Large imports - load into memory when needed
     # Silence Ultralytics' import-time output
     with open(os.devnull, "w") as f, redirect_stdout(f), redirect_stderr(f):
         from ultralytics import YOLO

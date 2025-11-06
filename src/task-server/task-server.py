@@ -40,7 +40,7 @@ class EdgeClient:
 
         logger.info(f"Edge client started on address {self.ip}:{self.port} with {self.cpus} cpus and {self.memory_mb}MB of memory")
 
-    def serve(self, container_image, timeout=2):
+    def serve(self, container_image, timeout=5):
         self.registerNode()
         self.heartbeatSender()
 
@@ -108,7 +108,7 @@ class EdgeClient:
 
     # Run the task on the current node
     def runTask(self, task: edge_pb2.Task, container_pool) -> str:
-        print(f"Running task {task.inputID} with id {task.taskID} and input {task.input} on node {self.ip}:{self.port}")
+        print(f"Running task {task.inputID} with id {task.taskID} and input {task.input[:100]} on node {self.ip}:{self.port}")
 
         try:
             with container_pool.getContainer() as pool_container:
@@ -117,11 +117,10 @@ class EdgeClient:
 
                 container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
                 json_params = json.dumps(container_params)
-                print(f"JSON params: {json_params}")
 
                 start_time = time.perf_counter()
                 
-                print(f"Container {pool_container.id} sending {json_params}")
+                print(f"Container {pool_container.id} sending {json_params[:100]}")
                 cont.send(json_params.encode())
 
                 received_inputID = -1
@@ -149,6 +148,7 @@ class EdgeClient:
                         print(f"Container {pool_container.id}, sent input id: {task.inputID}, received input id: {received_inputID}, count {count}, received out: {output}, err: {error}")
                         count += 1
                     except TimeoutError:
+                        print("CONTAINER TIMED OUT!!")
                         return net.createResponse(False, b"Container timed out")
 
                 end_time = time.perf_counter()
@@ -218,7 +218,7 @@ def main(address):
         access_server_address=access_server_address
     )
 
-    edge_client.serve("task_sandbox")
+    edge_client.serve("task_sandbox", timeout=5)
 
 if __name__ == "__main__":
     address = None

@@ -65,7 +65,7 @@ class EdgeAccess:
         return False
 
     # Called when a task is submitted to the access server by a client.
-    def scheduleTask(self, header, raw_payload, diagnostics):
+    def scheduleTask(self, header, raw_payload, diagnostics, timeout=5):
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
         memory_mb = task.memory_requirement_mb
@@ -82,7 +82,7 @@ class EdgeAccess:
             self.logger.debug(f"Scheduled task on node {edge_address}")
 
             edge_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            edge_connection.settimeout(3)
+            edge_connection.settimeout(timeout)
 
             ip = edge_address[0]
             port = edge_address[1]

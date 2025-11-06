@@ -14,7 +14,7 @@ class NoContainersExeception(Exception):
 class Container:
     client = docker.from_env()
 
-    def __init__(self, image, cpuset_cpus=None):
+    def __init__(self, image, cpuset_cpus=None, timeout=5):
         self.container = self.client.containers.create(
             image,
             tty=False,
@@ -32,7 +32,7 @@ class Container:
         self.container.start()
 
         self.sock = self.container.attach_socket(params={"stdin": 1, "stdout": 1, "stderr": 1,"stream": 1})
-        self.sock._sock.settimeout(2)
+        self.sock._sock.settimeout(timeout)
 
     def getContainer(self):
         return self.container

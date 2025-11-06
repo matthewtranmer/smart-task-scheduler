@@ -3,15 +3,18 @@
 # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # suppress TensorFlow INFO and WARNING logs
 
 import numpy as np
-from keras.models import load_model
-from keras.preprocessing import image
+import multiprocessing as mp
 import io
 from PIL import Image
 
 
 # Uses the trained model to predict the quality of a banana
 # Returns True when predicted fresh, False when bad
-def fruitQuality(image_bytes: bytes):
+def isFruitFresh(image_bytes: bytes):
+    # Large imports - load into memory when needed
+    from keras.models import load_model
+    from keras.preprocessing import image
+
     # Load trained model into memory
     model = load_model("/app/tasks/fruit_quality/banana_freshness_model_final.h5", compile=False)  # or banana_freshness_model_final.h5
 
@@ -28,3 +31,9 @@ def fruitQuality(image_bytes: bytes):
         return True
     
     return False
+
+def fruitQuality(image_bytes: bytes):
+    with mp.Pool(1) as pool:
+        response = pool.apply(isFruitFresh, args=(image_bytes,))
+
+    return response

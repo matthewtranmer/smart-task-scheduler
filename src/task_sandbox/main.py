@@ -1,8 +1,8 @@
 import time, sys, json, socket, os, subprocess, traceback, base64
 
 from tasks.detect_human.detect_human import detectHuman
-# from tasks.classify_fruit.classify_fruit import classifyFruit
-# from tasks.fruit_quality.fruit_quality import fruitQuality
+from tasks.classify_fruit.classify_fruit import classifyFruit
+from tasks.fruit_quality.fruit_quality import fruitQuality
 from tasks.compression.compression import compress
 from tasks.encryption.encryption import encrypt
 
@@ -25,17 +25,11 @@ def main():
                 # Select task
                 match input["id"]:
                     case 0:
-                        image_bytes_b64 = parameters["img_bytes"].encode()
-                        image_bytes = base64.decodebytes(image_bytes_b64)
-
-                        result = detectHuman(image_bytes)
-                        # pass
+                        result = detectHuman(base64.decodebytes(parameters["img_bytes"].encode()))
                     case 1:
-                        # result = classifyFruit(parameters["img_bytes"])
-                        pass
+                        result = classifyFruit(base64.decodebytes(parameters["img_bytes"].encode()))
                     case 2:
-                        # result = fruitQuality(parameters["img_bytes"])
-                        pass
+                        result = fruitQuality(base64.decodebytes(parameters["img_bytes"].encode()))
                     case 3:
                         result = compress(parameters["data"])
                     case 4:
