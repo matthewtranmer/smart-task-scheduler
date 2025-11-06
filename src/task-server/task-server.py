@@ -106,8 +106,6 @@ class EdgeClient:
         response = edge_pb2.Response()
         response.ParseFromString(response_bytes)
 
-        print(response)
-
     # Run the task on the current node
     def runTask(self, task: edge_pb2.Task, container_pool) -> str:
         print(f"Running task {task.inputID} with id {task.taskID} and input {task.input} on node {self.ip}:{self.port}")
@@ -139,12 +137,11 @@ class EdgeClient:
 
                         if (error):
                             while output != "":
-                                print(f"CONT OUT: {output}")
+                                print(f"{output}")
                                 output, error = cont.receive()
-                                print(1)
-                            print("-----------------------")
-                            return
+                            return net.createResponse(False, b"Container error")
 
+                        print(f"OUTPUT: {output}")
 
                         decoded_output = json.loads(output)
                         received_inputID = decoded_output["inputID"]
@@ -180,14 +177,14 @@ class EdgeClient:
     def handleRequest(self, sock, addr, container_pool):
         parsed_header, raw_payload = net.recv(sock)   
 
-        response = None
+        response = b""
         if (parsed_header.commandID == net.Commands.SCHEDULE_TASK):
             task = edge_pb2.Task()
             task.ParseFromString(raw_payload)
 
             response = self.runTask(task, container_pool)
 
-        if response == None:
+        else:
             response = net.createResponse(False, b"Command does not exist")
 
         header = net.createHeader(parsed_header.commandID)

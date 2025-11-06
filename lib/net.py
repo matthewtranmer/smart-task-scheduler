@@ -7,6 +7,16 @@ class Commands():
     REGISTRATION = 3
     GATHER_DIAGNOSTICS = 4
 
+class Tasks():
+    DETECT_HUMAN = 0
+    CLASSIFY_FRUIT = 1
+    FRUIT_QUALITY = 2
+    COMPRESSION = 3
+    ENCRYPTION = 4
+    ADDITION = 100
+    MULTIPLICATION = 101
+    DIVISION = 102
+
 def createHeader(commandID):
     header = edge_pb2.Header()
     header.commandID = commandID
@@ -47,7 +57,12 @@ def recv(sock):
     parsed_header = edge_pb2.Header()
     parsed_header.ParseFromString(header_bytes)
 
-    raw_payload = sock.recv(parsed_header.messageLength)
+    raw_payload = b""
+    bytes_read = 0
+    while bytes_read < parsed_header.messageLength:
+        buffer = sock.recv(parsed_header.messageLength)
+        bytes_read += len(buffer)
+        raw_payload += buffer
 
     return (parsed_header, raw_payload)
 

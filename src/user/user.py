@@ -1,88 +1,158 @@
-import socket, time, threading, json, random, os, traceback, sys
+import socket, time, threading, json, random, os, traceback, sys, base64
 from lib import edge_pb2, net
 
-access_server_address = ("10.45.1.34", 2004)
+class TaskOffloader:
+    def __init__(self, access_server_addr):
+        self.access_server_addr = access_server_addr
 
-def submitTask(task) -> edge_pb2.Response:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(access_server_address)
+    def detectHuman(self, image_bytes, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
 
-    header = net.createHeader(net.Commands.SCHEDULE_TASK)
-    net.send(sock, header, task.SerializeToString())
+        task = net.createTask(
+            taskID=net.Tasks.DETECT_HUMAN,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
 
-    _, payload = net.recv(sock)
+        return self._submitTask(task)
 
-    sock.close()
+    def classifyFruit(self, image_bytes, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"img_bytes": image_bytes}).encode()
 
-    response = edge_pb2.Response()
-    response.ParseFromString(payload)
+        task = net.createTask(
+            taskID=net.Tasks.CLASSIFY_FRUIT,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
 
-    return response
+        return self._submitTask(task)
 
-threads = []
+    def fruitQuality(self, image_bytes, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"img_bytes": image_bytes}).encode()
 
-def main():
+        task = net.createTask(
+            taskID=net.Tasks.FRUIT_QUALITY,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
+
+        return self._submitTask(task)
+
+    def compress(self, data, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"data": data}).encode()
+
+        task = net.createTask(
+            taskID=net.Tasks.COMPRESSION,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
+
+        return self._submitTask(task)
+
+    def encrypt(self, key, plaintext, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"key": key, "plaintext": plaintext}).encode()
+
+        task = net.createTask(
+            taskID=net.Tasks.ENCRYPTION,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
+
+        return self._submitTask(task)
+
+    def addition(self, a, b, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"a": a, "b": b}).encode()
+
+        task = net.createTask(
+            taskID=net.Tasks.ADDITION,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
+
+        return self._submitTask(task)
+
+    def multiplication(self, a, b, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"a": a, "b": b}).encode()
+
+        task = net.createTask(
+            taskID=net.Tasks.MULTIPLICATION,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
+
+        return self._submitTask(task)
+
+    def division(self, a, b, deadline) -> edge_pb2.Response:
+        payload = json.dumps({"a": a, "b": b}).encode()
+
+        task = net.createTask(
+            taskID=net.Tasks.DIVISION,
+            input=payload,
+            memory_requirement_mb=300,
+            deadline_ms=deadline,
+            inputID=random.randint(10000,9999999)
+        )
+
+        return self._submitTask(task)
+
+    def _submitTask(self, task) -> edge_pb2.Response:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(self.access_server_addr)
+
+        header = net.createHeader(net.Commands.SCHEDULE_TASK)
+
+        serialised_task = task.SerializeToString()
+        print(f"Task length: {len(serialised_task)}")
+        net.send(sock, header, serialised_task)
+
+        _, payload = net.recv(sock)
+
+        sock.close()
+
+        response = edge_pb2.Response()
+        response.ParseFromString(payload)
+
+        return response
+
+def main(address):
     try:
+        offloader = TaskOffloader(address)
+
+        with open("1.jpg", "rb") as f:
+                image_bytes = f.read()
+
         while True:
-            a = random.randint(1,50)
-            b = random.randint(1,50)
-
-            payload = json.dumps({"a": a, "b": b}).encode()
-
-            input_id = random.randint(10000,9999999)
-
-            task = net.createTask(
-                taskID=0,
-                input=payload,
-                memory_requirement_mb=300,
-                deadline_ms=1000,
-                inputID=input_id
-            )
-
-            print()
-            print("Submitted Task --------------------------------")
-
-            true_result = a + b
-
-            print(f"true_result: {true_result}")
-            print("a:", a)
-            print("b:", b)
+            deadline = 1000
+            a = random.randint(1, 99)
+            b = random.randint(1, 99)
 
             start_time = time.perf_counter()
-            response = submitTask(task)
+            # response = offloader.addition(a, b, deadline)
+            
+            response = offloader.detectHuman(image_bytes, deadline)
+
             end_time = time.perf_counter()
 
             time_elapsed = end_time - start_time
 
-            if(time_elapsed * 1000 > task.deadline_ms):
-                print("DEADLINE MISSED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(f"Time Elapsed {time_elapsed}")
+            print(f"Response {response}")
 
-            print(f"Received task {input_id} Response: {response}")
-            print(f"Elapsed time: {time_elapsed:.3f} seconds")
-
-            json_response = response.value.decode()
-            try:
-                parsed_response = json.loads(json_response)
-            except Exception as e:
-                print(e)
-
-            if (response.success == False):
-                print(json_response)
-                time.sleep(0.3)
-                continue
-
-            result = int(parsed_response["value"])
             
-            print("Result from server:", result)
-
-            if (input_id != parsed_response["inputID"]):
-                print("Dont match")
-
-            if (result != true_result):
-                print("Broken")
-
-            if (input_id != parsed_response["inputID"] or result != true_result):
-                os._exit(-1)
 
     except Exception as e:
         print("CLIENT SIDE EXECEPTION")
@@ -103,8 +173,5 @@ if __name__ == "__main__":
         address[1] = int(address[1])
         address = tuple(address)
 
-    if address != None:
-        access_server_address = address
-
     for i in range(threads):
-        thread = threading.Thread(target=main).start()
+        thread = threading.Thread(target=main, args=(address, )).start()

@@ -1,8 +1,28 @@
-FROM python:3.14-alpine
+FROM sandbox_base
+
+ENV HOME=/tmp
+ENV ULTRALYTICS_CONFIG_DIR=/tmp/Ultralytics
+ENV CUDA_VISIBLE_DEVICES=-1
+ENV TF_CPP_MIN_LOG_LEVEL=3
+ENV XDG_CONFIG_HOME=/tmp/xdg-config
+ENV MPLCONFIGDIR=/tmp/xdg-config/matplotlib
+ENV ULTRALYTICS_SETTINGS=0
+
+ENV TMPDIR=/tmp
+ENV TEMP=/tmp
+ENV TMP=/tmp
+
+ENV TEST_TMPDIR=/tmp/absl_testing
 
 WORKDIR /app
-COPY main.py /app/main.py
 
+RUN mkdir -p /tmp/Ultralytics && echo "version: 0.0.6" > /tmp/Ultralytics/settings.yaml
+
+RUN mkdir -p /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing \
+    && chmod 1777 /tmp /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing \
+    && chown -R root:root /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing
+
+COPY main.py /app/main.py
 COPY tasks /app/tasks
 
 ENTRYPOINT [ "python3", "-u", "main.py" ]

@@ -1,0 +1,1 @@
+docker build ./src/task_sandbox/sandbox_base -t sandbox_base 

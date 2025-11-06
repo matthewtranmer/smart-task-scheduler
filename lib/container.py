@@ -22,7 +22,6 @@ class Container:
             auto_remove=True,
             network_disabled=True,
             detach=True,
-            read_only=True,    
             cpuset_cpus=cpuset_cpus,
         )
 
@@ -176,11 +175,14 @@ class ContainerPool:
         
         container = pool_container.container
         
+        # If container has stopped, restart it
         if restart_container:
             container = Container(
                 image=pool_container.container.image,
                 cpuset_cpus=pool_container.container.cpuset_cpus
             )
+
+            print("Restarted container")
 
         self.lock.acquire()
         self.containers.append(container)
