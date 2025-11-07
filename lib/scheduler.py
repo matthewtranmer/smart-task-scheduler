@@ -15,18 +15,28 @@ class NodeResourceExecpetion(Exception):
         return f"{self.message}"
     
 class Tasks():
-    ADDITION = 0
-    MULTIPLICATION = 1
-    DIVISION = 2
+    DETECT_HUMAN = 0
+    CLASSIFY_FRUIT = 1
+    FRUIT_QUALITY = 2
+    COMPRESSION = 3
+    ENCRYPTION = 4
+    ADDITION = 100
+    MULTIPLICATION = 101
+    DIVISION = 102
 
+    @staticmethod
     def getName(task_id):
-        match task_id:
-            case 0:
-                return "Addition"
-            case 1:
-                return "Multiplication"
-            case 2:
-                return "Division"
+        names = {
+            Tasks.DETECT_HUMAN: "Detect Human",
+            Tasks.CLASSIFY_FRUIT: "Classify Fruit",
+            Tasks.FRUIT_QUALITY: "Fruit Quality",
+            Tasks.COMPRESSION: "Compression",
+            Tasks.ENCRYPTION: "Encryption",
+            Tasks.ADDITION: "Addition",
+            Tasks.MULTIPLICATION: "Multiplication",
+            Tasks.DIVISION: "Division",
+        }
+        return names.get(task_id, f"Unknown({task_id})")
 
 class Scheduler:
     index = 0

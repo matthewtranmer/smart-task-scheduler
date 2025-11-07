@@ -1,5 +1,6 @@
 import socket, time, threading, json, random, os, traceback, sys, base64
 from lib import edge_pb2, net
+from lib.scheduler import Tasks 
 
 class TaskOffloader:
     def __init__(self, access_server_addr):
@@ -9,7 +10,7 @@ class TaskOffloader:
         payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.DETECT_HUMAN,
+            taskID=Tasks.DETECT_HUMAN,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -22,7 +23,7 @@ class TaskOffloader:
         payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.CLASSIFY_FRUIT,
+            taskID=Tasks.CLASSIFY_FRUIT,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -35,7 +36,7 @@ class TaskOffloader:
         payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.FRUIT_QUALITY,
+            taskID=Tasks.FRUIT_QUALITY,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -48,7 +49,7 @@ class TaskOffloader:
         payload = json.dumps({"data": data}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.COMPRESSION,
+            taskID=Tasks.COMPRESSION,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -61,7 +62,7 @@ class TaskOffloader:
         payload = json.dumps({"key": key, "plaintext": plaintext}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.ENCRYPTION,
+            taskID=Tasks.ENCRYPTION,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -74,7 +75,7 @@ class TaskOffloader:
         payload = json.dumps({"a": a, "b": b}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.ADDITION,
+            taskID=Tasks.ADDITION,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -87,7 +88,7 @@ class TaskOffloader:
         payload = json.dumps({"a": a, "b": b}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.MULTIPLICATION,
+            taskID=Tasks.MULTIPLICATION,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -100,7 +101,7 @@ class TaskOffloader:
         payload = json.dumps({"a": a, "b": b}).encode()
 
         task = net.createTask(
-            taskID=net.Tasks.DIVISION,
+            taskID=Tasks.DIVISION,
             input=payload,
             memory_requirement_mb=300,
             deadline_ms=deadline,
@@ -132,29 +133,52 @@ def main(address):
     try:
         offloader = TaskOffloader(address)
 
-        with open("1.jpg", "rb") as f:
+        with open("src/user/test_data/human.jpg", "rb") as f:
                 image_bytes = f.read()
 
         while True:
             deadline = 1000
-            a = random.randint(1, 99)
-            b = random.randint(1, 99)
-
+            
             start_time = time.perf_counter()
 
-            # response = offloader.addition(a, b, deadline)
-            # response = offloader.detectHuman(image_bytes, deadline)
-            # response = offloader.classifyFruit(image_bytes, deadline)
-            response = offloader.fruitQuality(image_bytes, deadline)
+            task_id = random.randint(0, 5)
+            match task_id:
+                case 0:
+                        print("DETECT HUMAN")
+                        response = offloader.detectHuman(image_bytes, deadline)
+                case 1:
+                        print("CLASSIFY FRUIT")
+                        response = offloader.classifyFruit(image_bytes, deadline)
+                case 2:
+                        print("FRUIT QUALITY")
+                        response = offloader.fruitQuality(image_bytes, deadline)
+                case 3:
+                        print("ADDITION")
+
+                        a = random.randint(1, 99)
+                        b = random.randint(1, 99)
+
+                        response = offloader.addition(a, b, deadline)
+                case 4:
+                        print("MULTIPLICATION")
+
+                        a = random.randint(1, 99)
+                        b = random.randint(1, 99)
+
+                        response = offloader.multiplication(a, b, deadline)
+                case 5:
+                        print("DIVISION")
+
+                        a = random.randint(1, 99)
+                        b = random.randint(1, 99)
+
+                        response = offloader.division(a, b, deadline)
 
             end_time = time.perf_counter()
-
             time_elapsed = end_time - start_time
 
             print(f"Time Elapsed {time_elapsed}")
             print(f"Response {response}")
-
-            break
 
     except Exception as e:
         print("CLIENT SIDE EXECEPTION")
