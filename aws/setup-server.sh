@@ -85,4 +85,4 @@ fi
 # Start server (as ubuntu, from app dir)
 echo "Starting task server..."
 cd "$APP_DIR"
-sudo -u "$USER" "$APP_DIR/run/cloud-server.sh"
+sudo -u "$USER" "$APP_DIR/run/task-server-cloud.sh"
