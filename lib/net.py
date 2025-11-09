@@ -30,7 +30,7 @@ def createTask(taskID: int, input: bytes, memory_requirement_mb: int, deadline_m
 
     return task
 
-def send(sock, header, data):
+def send(sock, header: edge_pb2.Header, data: bytes):
     header.messageLength = len(data)
 
     header_bytes = header.SerializeToString()
