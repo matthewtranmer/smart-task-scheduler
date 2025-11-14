@@ -1,4 +1,4 @@
-FROM sandbox_base
+FROM matthewtranmer/sandbox_base
 
 ENV HOME=/tmp
 ENV ULTRALYTICS_CONFIG_DIR=/tmp/Ultralytics
