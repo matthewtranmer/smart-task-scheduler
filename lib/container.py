@@ -1,7 +1,8 @@
-import docker, socket, random, os
+import docker, socket, random, os, json
 from docker.types import LogConfig
 import threading
-import time
+import time, asyncio
+from lib import edge_pb2, net
 
 class NoContainersExeception(Exception):
     def __init__(self, message):
@@ -10,6 +11,15 @@ class NoContainersExeception(Exception):
 
     def __str__(self):
         return f"{self.message}"
+
+class InternalContainerError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return f"{self.message}"
+
 
 class Container:
     client = docker.from_env()
@@ -28,6 +38,7 @@ class Container:
         self.containerID = self.container.id
         self.image = image
         self.cpuset_cpus = cpuset_cpus
+        self.timeout = timeout
 
         self.container.start()
 
@@ -46,6 +57,62 @@ class Container:
             mem_limit=memory_bytes,
             memswap_limit=memory_bytes
         )
+
+    def _getErrorFromContainer(self):
+        error_message = ""
+        self.settimeout(1)
+
+        try:
+            while output != "":
+                output, _ = self.receive()
+                error_message += output
+        except TimeoutError:
+            pass
+        finally:
+            self.settimeout(self.timeout)
+
+        return error_message
+        
+    # Handle bizantine execptions
+    # handle timeout
+
+    def executeTask(self, task: edge_pb2.Task) -> tuple[str, float]:
+        # Convert task into a JSON string to give to the container
+        container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
+        json_params = json.dumps(container_params)
+
+        # Start execution time counter
+        start_time = time.perf_counter()
+        # Send task to container
+        self.send(json_params.encode())
+
+        received_inputID = -1
+        output = ""
+        # Continue until we receive the indended output 
+        while received_inputID != task.inputID:
+            output, error = self.receive()
+
+            # EOF from container, ignore
+            if output == "":
+                continue
+
+            # Handle container errors
+            if (error):
+                message = self._getErrorFromContainer()
+                message = output + message
+
+                raise InternalContainerError(message)
+
+            # Parse output JSON to compare input IDs
+            parsed_output = json.loads(output)
+            received_inputID = parsed_output["inputID"]
+
+        # Calculate execution time
+        end_time = time.perf_counter()
+        execution_time_ms = (end_time - start_time) * 1000
+            
+        return output, execution_time_ms
+        
 
     def send(self, data: bytes):
         self.sock._sock.sendall(data + b"\n")
@@ -209,16 +276,24 @@ class StaticContainerPool(ContainerPool):
             new_container = Container(image=image, cpuset_cpus=str(id))
             self.containers.append(new_container)
 
-    def getContainer(self):
-        with self.lock:
-            self.assigned_containers += 1
+        self.semaphore = threading.Semaphore(len(cpu_ids))
 
-            if (len(self.containers) > 0):
-                # Get container from pool
-                new_container = self.containers.pop(0)
-         
-                return PoolContainer(self, new_container, short_lived=False)
+    async def getContainer(self, blocking=True):
+        if self.semaphore.acquire(blocking):
+            with self.lock:
+                self.assigned_containers += 1
+
+                if (len(self.containers) > 0):
+                    # Get container from pool
+                    new_container = self.containers.pop(0)
+            
+                    return PoolContainer(self, new_container, short_lived=False)
+                else:
+                    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
             
         raise NoContainersExeception("All available containers are in use")
         
+    def releaseContainer(self, pool_container):
+        super().releaseContainer(pool_container)
+        self.semaphore.release()
             

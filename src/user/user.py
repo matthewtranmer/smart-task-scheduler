@@ -141,7 +141,7 @@ def main(address):
             
             start_time = time.perf_counter()
 
-            task_id = random.randint(0, 5)
+            task_id = random.randint(0, 2)
             match task_id:
                 case 0:
                         print("DETECT HUMAN")

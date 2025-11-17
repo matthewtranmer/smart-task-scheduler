@@ -13,7 +13,7 @@ def createHeader(commandID):
 
     return header
 
-def createResponse(success: bool, value: bytes):
+def createResponse(success: bool, value: bytes) -> edge_pb2.Response:
     response = edge_pb2.Response()
     response.success = success
     response.value = value

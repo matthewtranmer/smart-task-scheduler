@@ -1,10 +1,11 @@
 import socket, time, threading, random, json, os, sys, logging
 from lib import edge_pb2, net, container, system
-import queue
+import queue, asyncio
 
 class CloudClient:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    task_queue = queue.Queue()
+    waiting_tasks = 0
+    waiting_lock = threading.Lock()
 
     def __init__(
             self,
@@ -27,6 +28,8 @@ class CloudClient:
         logger.info(f"Cloud client started on address {self.ip}:{self.port}")
 
     def serve(self, container_image, timeout=5):
+        self.timeout = timeout
+
         try:
             cpus = system.getPhysicalCpuIds()
 
@@ -41,82 +44,52 @@ class CloudClient:
             logging.ERROR(f"Exception raised in serve function {e}")
             os._exit(-1)
 
-
     # Run the task on the current node
-    def runTask(self, task: edge_pb2.Task, container_pool) -> str:
-        print(f"Running task {task.inputID} with id {task.taskID} and input {task.input[:100]} on node {self.ip}:{self.port}")
+    async def runTask(self, task: edge_pb2.Task, container_pool, blocking=True) -> str:
+        if (blocking):
+            with self.waiting_lock:
+                self.waiting_tasks += 1
 
-        try:
-            with container_pool.getContainer() as pool_container:
-                print("Scheduling....")
-                cont = pool_container.container
-
-                container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
-                json_params = json.dumps(container_params)
-
-                start_time = time.perf_counter()
-                
-                print(f"Container {pool_container.id} sending {json_params[:100]}")
-                cont.send(json_params.encode())
-
-                received_inputID = -1
-                count = 0
-                output = ""
-                while received_inputID != task.inputID:
-                    # This call times out and the thread just stops - container still processing input
-                    # TODO: too much indentation, handle errors in container
-                    try:
-                        output, error = cont.receive()
-                        if output == "":
-                            continue
-
-                        if (error):
-                            while output != "":
-                                print(f"{output}")
-                                output, error = cont.receive()
-                            return net.createResponse(False, b"Container error")
-
-                        print(f"OUTPUT: {output}")
-
-                        decoded_output = json.loads(output)
-                        received_inputID = decoded_output["inputID"]
-
-                        print(f"Container {pool_container.id}, sent input id: {task.inputID}, received input id: {received_inputID}, count {count}, received out: {output}, err: {error}")
-                        count += 1
-                    except TimeoutError:
-                        print("CONTAINER TIMED OUT!!")
-                        return net.createResponse(False, b"Container timed out")
-
-                end_time = time.perf_counter()
-
-                print(f"Output length: {len(output)}")
-
-                execution_time_ms = (end_time - start_time) * 1000
-
-                if (error):
-                    print("Error running container")
-                    while len(output) > 0:
-                        output, error = cont.receive()
-                        print(output) 
-                else:
-                    print(f"Response generated as: {output}")
-                    print(f"Execution time: {execution_time_ms}ms")
-                    print(f"Deadline: {task.deadline_ms}ms")
-                    print("")
-
-                return net.createResponse(True, output.encode())
+        # Get a container from the pool
+        with await container_pool.getContainer(blocking) as pool_container:
+            if (blocking):
+                with self.waiting_lock:
+                    self.waiting_tasks -= 1
             
-        except container.NoContainersExeception:
-            return net.createResponse(False, "No containers available")
+            scheduled_container = pool_container.container
 
+            print(f"Waiting tasks: {self.waiting_tasks}")
+            
+            try:
+                response, processing_time = scheduled_container.executeTask(task)
+                self.logger.info(f"Executed task with id {task.taskID}, processing time {processing_time}ms")
+
+                return net.createResponse(True, response.encode())
+
+            except container.InternalContainerError as e:
+                self.logger.exception(e)
+                return net.createResponse(False, b"Internal container error encountered while executing task")
+            
+            except TimeoutError:
+                return net.createResponse(False, b"Container timeout while executing task")
+            
+        return net.createResponse(False, b"No containers available")
+                
     def scheduleTask(self, payload, container_pool):
         task = edge_pb2.Task()
         task.ParseFromString(payload)
 
-
-
-        response = self.runTask(task, container_pool)
-        return response
+        try:
+            response = self.runTask(task, container_pool)
+            return asyncio.run(asyncio.wait_for(response, timeout=self.timeout))
+        
+        except asyncio.TimeoutError:
+            logging.warning("Timed out waiting for a container")
+            return net.createResponse(False, b"Timed out waiting for a container")
+        
+        except container.NoContainersExeception:
+            logging.warning("No containers")
+            return net.createResponse(False, b"No containers")
 
     def handleRequest(self, sock, addr, container_pool):
         parsed_header, raw_payload = net.recv(sock)   
@@ -143,7 +116,6 @@ class EdgeClient(CloudClient):
             ip=None, 
             port=0
         ):
-        super().__init__(logger, ip, port)
 
         self.access_server_address = access_server_address
         self.logger = logger
@@ -152,9 +124,6 @@ class EdgeClient(CloudClient):
             self.ip = ip
         else:
             self.ip = net.getLocalIP()
-
-        print(self.ip)
-        print(self.port)
 
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.ip, port))
@@ -173,6 +142,9 @@ class EdgeClient(CloudClient):
             self.memory_mb = system.getSystemMemoryMB() - 1024
 
         logger.info(f"Edge client started on address {self.ip}:{self.port} with {self.cpus} cpus and {self.memory_mb}MB of memory")
+
+    def runTask(self, task, container_pool):
+        return super().runTask(task, container_pool, blocking=False)
 
     def serve(self, container_image, timeout=5):
         self.registerNode()
