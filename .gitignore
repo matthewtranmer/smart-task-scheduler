@@ -2,3 +2,4 @@ edge-access-log
 env/
 local/
 src/user/test_data/
+__pycache__/
