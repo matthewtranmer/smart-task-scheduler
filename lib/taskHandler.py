@@ -80,6 +80,8 @@ class CloudClient:
         task.ParseFromString(payload)
 
         try:
+            logging.debug("Running task")
+
             response = self.runTask(task, container_pool)
             return asyncio.run(asyncio.wait_for(response, timeout=self.timeout))
         
