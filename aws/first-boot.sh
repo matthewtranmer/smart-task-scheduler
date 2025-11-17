@@ -46,7 +46,7 @@ sudo -u "$USER" "$APP_DIR/env/bin/pip" install -r "$APP_DIR/requirements.txt"
 
 # Build docker image
 echo "Building sandbox docker image -------------------------------------------------------------------------------------"
-sudo -u "$USER" "$APP_DIR/src/task_sandbox/build.sh"
+sudo -u "$USER" docker build "$APP_DIR/src/task_sandbox" -t task_sandbox 
 
 chmod +x "$APP_DIR/run/task-server-cloud.sh"
 
@@ -67,11 +67,6 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# Reload systemd to read new service
 systemctl daemon-reload
-
-# Enable on boot
 systemctl enable task-server-cloud.service
-
-# Start now
 systemctl start task-server-cloud.service

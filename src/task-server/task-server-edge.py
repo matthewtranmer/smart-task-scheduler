@@ -9,13 +9,12 @@ def main(address):
         level=logging.INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-
-    access_server_address = address    
+    
     logger = logging.getLogger(__name__)
 
     edge_client = EdgeClient(
         logger=logger,
-        access_server_address=access_server_address
+        access_server_address=address
     )
 
     edge_client.serve("task_sandbox", timeout=5)
@@ -27,5 +26,7 @@ if __name__ == "__main__":
         address = address.split(":")
         address[1] = int(address[1])
         address = tuple(address)
+
+    print(address)
 
     main(address)

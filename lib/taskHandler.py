@@ -1,10 +1,11 @@
 import socket, time, threading, random, json, os, sys, logging
 from lib import edge_pb2, net, container, system
+import queue
 
 class CloudClient:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    task_queue = queue.Queue()
 
-    #TODO: CLOUD CLIENT DOESN'T NEED MEMORY AND CPUs
     def __init__(
             self,
             logger: logging.Logger, 
@@ -108,16 +109,21 @@ class CloudClient:
         except container.NoContainersExeception:
             return net.createResponse(False, "No containers available")
 
+    def scheduleTask(self, payload, container_pool):
+        task = edge_pb2.Task()
+        task.ParseFromString(payload)
+
+
+
+        response = self.runTask(task, container_pool)
+        return response
 
     def handleRequest(self, sock, addr, container_pool):
         parsed_header, raw_payload = net.recv(sock)   
 
         response = b""
         if (parsed_header.commandID == net.Commands.SCHEDULE_TASK):
-            task = edge_pb2.Task()
-            task.ParseFromString(raw_payload)
-
-            response = self.runTask(task, container_pool)
+            response = self.scheduleTask(raw_payload, container_pool)
 
         else:
             response = net.createResponse(False, b"Command does not exist")
@@ -146,6 +152,9 @@ class EdgeClient(CloudClient):
             self.ip = ip
         else:
             self.ip = net.getLocalIP()
+
+        print(self.ip)
+        print(self.port)
 
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.ip, port))

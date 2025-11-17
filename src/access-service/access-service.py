@@ -13,7 +13,7 @@ class EdgeAccess:
         self.logger = logger
         self.diagnostics = diagnostics
         self.port = port
-        self.cloud_address = cloud_address
+        self.cloud_address = (socket.gethostbyname(cloud_address[0]), cloud_address[1])
 
         if ip != None:
             self.ip = ip
@@ -79,6 +79,7 @@ class EdgeAccess:
             scheduled_on_edge = True
 
             try:
+                # raise s.NoNodesExeception  # TODO: remove this line when scheduler is ready
                 address = self.scheduler.schedule(memory_mb=memory_mb)
                 self.logger.debug(f"Scheduled task on node {address}")
             # except s.NoNodesExeception:
@@ -91,7 +92,11 @@ class EdgeAccess:
                 self.logger.debug(f"Sent task to cloud")
 
             connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            connection.settimeout(timeout)
+            
+            if (scheduled_on_edge):
+                connection.settimeout(timeout)
+            else:
+                connection.settimeout(timeout*2.5)
 
             ip = address[0]
             port = address[1]
@@ -218,7 +223,7 @@ def main():
         scheduler=scheduler,
         logger= logger,
         diagnostics=diagnostics,
-        cloud_address=("10.45.1.34", 16225)
+        cloud_address=("ec2-16-170-214-43.eu-north-1.compute.amazonaws.com", 16225)
     )
 
     access_server.serve()    
