@@ -133,7 +133,7 @@ class EdgeAccess:
 
             return response
         except TimeoutError:
-            return net.createResponse(False, b"Edge node timedout").SerializeToString()
+            return net.createResponse(False, b"Node timedout").SerializeToString()
         finally:
             connection.close()
 
@@ -224,7 +224,7 @@ def main():
         logger= logger,
         diagnostics=diagnostics,
         # cloud_address=("10.45.1.34", 16225)
-        cloud_address=("ec2-51-20-78-41.eu-north-1.compute.amazonaws.com", 16225)
+        cloud_address=("ec2-51-21-247-208.eu-north-1.compute.amazonaws.com", 16225)
     )
 
     access_server.serve()    

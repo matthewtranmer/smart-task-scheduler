@@ -34,8 +34,10 @@ class CloudClient:
             cpus = system.getPhysicalCpuIds()
 
             with container.StaticContainerPool(container_image, cpus) as container_pool:
+                print("Waiting")
                 while True:
                     sock, addr = self.server.accept()
+                    print("Accepted connection")
                     sock.settimeout(timeout)
 
                     thread = threading.Thread(target=self.handleRequest, args=(sock, addr, container_pool), daemon=True)
