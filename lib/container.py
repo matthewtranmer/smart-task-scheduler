@@ -96,15 +96,13 @@ class Container:
             if output == "":
                 continue
 
+            # Parse output from container
+            parsed_output = json.loads(output)
+
             # Handle container errors
             if (error):
-                message = self._getErrorFromContainer()
-                message = output + message
+                raise InternalContainerError(parsed_output["value"])
 
-                raise InternalContainerError(message)
-
-            # Parse output JSON to compare input IDs
-            parsed_output = json.loads(output)
             received_inputID = parsed_output["inputID"]
 
         # Calculate execution time
@@ -276,24 +274,16 @@ class StaticContainerPool(ContainerPool):
             new_container = Container(image=image, cpuset_cpus=str(id))
             self.containers.append(new_container)
 
-        self.semaphore = threading.Semaphore(len(cpu_ids))
+    def getContainer(self):
+        self.assigned_containers += 1
 
-    async def getContainer(self, blocking=True):
-        if self.semaphore.acquire(blocking):
-            with self.lock:
-                self.assigned_containers += 1
-
-                if (len(self.containers) > 0):
-                    # Get container from pool
-                    new_container = self.containers.pop(0)
-            
-                    return PoolContainer(self, new_container, short_lived=False)
-                else:
-                    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        if (len(self.containers) > 0):
+            # Get container from pool
+            new_container = self.containers.pop(0)
+    
+            return PoolContainer(self, new_container, short_lived=False)
             
         raise NoContainersExeception("All available containers are in use")
         
     def releaseContainer(self, pool_container):
-        super().releaseContainer(pool_container)
-        self.semaphore.release()
-            
+        super().releaseContainer(pool_container)            

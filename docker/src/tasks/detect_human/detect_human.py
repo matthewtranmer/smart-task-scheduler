@@ -15,7 +15,7 @@ def imageContainsHuman(image: np.ndarray) -> bool:
         from ultralytics import YOLO
 
     # Load YOLO model into memory
-    model = YOLO("/app/tasks/detect_human/yolov8n.pt") 
+    model = YOLO("/app/src/tasks/detect_human/yolov8n.pt") 
     conf_threshold = 0.35
 
     # Run inference

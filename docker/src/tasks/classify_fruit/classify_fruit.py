@@ -37,7 +37,6 @@ def isFruitOrangeOrBanana(img_bytes: bytes):
     banana_conf = float(preds[BANANA_IDX])
     orange_conf = float(preds[ORANGE_IDX])
 
-    # (Optional) threshold so tiny activations don't count
     THRESH = 0.2
 
     if banana_conf >= orange_conf and banana_conf > THRESH:

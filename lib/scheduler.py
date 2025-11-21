@@ -38,6 +38,16 @@ class Tasks():
         }
         return names.get(task_id, f"Unknown({task_id})")
 
+class NodeType:
+    EDGE = 0
+    CLOUD = 1
+
+class ScheduledNode:
+    def __init__(self, address: tuple[str, int], node_type: int, memory_mb=None):
+        self.address = address
+        self.node_type = node_type
+        self.memory_mb = memory_mb
+
 class Scheduler:
     index = 0
     nodes = []
@@ -73,22 +83,32 @@ class Scheduler:
 
     def _findNodeIndex(self, address):
         node_index = 0
+        
         for node in self.nodes:
             if node["address"] == address:
                 return node_index
             
             node_index += 1
 
-        raise KeyError
+        raise KeyError("The node does not exist")
     
     def nodeHeartbeat(self, address):
         index = self._findNodeIndex(address)
         self.nodes[index]["timed_out"] = False
 
-    def removeNode(self, address):
-        node_index = self._findNodeIndex(address)
+    def removeNode(self, scheduled_node: ScheduledNode) -> bool:
+        if (scheduled_node.node_type == NodeType.CLOUD):
+            return
+
+        try:
+            node_index = self._findNodeIndex(scheduled_node.address)
+        except KeyError:
+            return False
+        
         print(f"removing node at index {node_index} --------------------------------------------------------")
         self.nodes.pop(node_index) 
+
+        return True
 
     # Returns addresses of dead nodes
     def removeDeadNodes(self) -> list[tuple[str, int]]:
@@ -113,21 +133,23 @@ class Scheduler:
         index = self._findNodeIndex(address)
         return self.nodes[index]["id"]
 
-class RoundRobin(Scheduler):
-    def schedule(self) -> tuple[str, int]:
-        if len(self.nodes) <= 0:
-            return None
+# class RoundRobin(Scheduler):
+#     def schedule(self) -> tuple[str, int]:
+#         if len(self.nodes) <= 0:
+#             return None
 
-        if self.index >= len(self.nodes):
-            self.index = 0
+#         if self.index >= len(self.nodes):
+#             self.index = 0
 
-        scheduled_node = self.nodes[self.index]["address"]
-        self.index += 1
+#         scheduled_node = self.nodes[self.index]["address"]
+#         self.index += 1
 
-        return scheduled_node
+#         return scheduled_node
+
+
     
 class RoundRobinWithAllocation(Scheduler):
-    def schedule(self, memory_mb):
+    def schedule(self, memory_mb) -> ScheduledNode:
         if (len(self.nodes) <= 0):
             raise NoNodesExeception("There are no nodes available to perform the task")
 
@@ -156,7 +178,7 @@ class RoundRobinWithAllocation(Scheduler):
                 self.index = 0
 
             if scheduled_node != None:
-                return scheduled_node["address"]
+                return ScheduledNode(scheduled_node["address"], NodeType.EDGE, memory_mb=memory_mb)
 
             if self.index == start_index:
                 # Couldnt find a node with either enough cpu and memory
@@ -169,13 +191,18 @@ class RoundRobinWithAllocation(Scheduler):
                 else:
                     raise NodeResourceExecpetion("There are no nodes with enough memory available")
 
-    def resetNode(self, address, memory_mb, processing_time_ms):
-        node_index = self._findNodeIndex(address)
+    def resetNode(self, scheduledNode: ScheduledNode, processing_time_ms) -> bool:
+        try:
+            node_index = self._findNodeIndex(scheduledNode.address)
+        except KeyError:
+            return False
 
         self.nodes[node_index]["cpus_available"] += 1
-        self.nodes[node_index]["memory_available"] += memory_mb
+        self.nodes[node_index]["memory_available"] += scheduledNode.memory_mb
         self.nodes[node_index]["cpu_time_ms"] += processing_time_ms
         self.nodes[node_index]["assigned_tasks"] -= 1
+
+        return True
 
     def calculateResourceUsage(self, sample_time_s) -> list:
         for node in self.nodes:
@@ -188,18 +215,19 @@ class RoundRobinWithAllocation(Scheduler):
             node["cpu_time_ms"] = 0
             node["cpu_usage"] = cpu_usage_percent
 
+class RoundRobinEdgeCloud(RoundRobinWithAllocation):
+    def __init__(self, cloud_address):
+        self.cloud_address = cloud_address
 
-
-
-
-
-
-
-
-
-
-
-
+    def schedule(self, memory_mb):
+        try:
+            return super().schedule(memory_mb)
+        except (NoNodesExeception, NodeResourceExecpetion):
+            return ScheduledNode(self.cloud_address, NodeType.CLOUD, memory_mb)
+        
+    def resetNode(self, scheduledNode, processing_time_ms):
+        if (scheduledNode.node_type == NodeType.EDGE):
+            super().resetNode(scheduledNode, processing_time_ms)
 
 
 

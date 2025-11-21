@@ -14,7 +14,6 @@ ENV TMP=/tmp
 
 ENV TEST_TMPDIR=/tmp/absl_testing
 
-WORKDIR /app
 
 RUN mkdir -p /tmp/Ultralytics && echo "version: 0.0.6" > /tmp/Ultralytics/settings.yaml
 
@@ -22,7 +21,10 @@ RUN mkdir -p /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/ab
     && chmod 1777 /tmp /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing \
     && chown -R root:root /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing
 
-COPY main.py /app/main.py
-COPY tasks /app/tasks
+WORKDIR /app
 
-ENTRYPOINT [ "python3", "-u", "main.py" ]
+COPY docker/src/ /app/src
+COPY lib/ /app/lib 
+COPY docker/images/cloud_task_service/main.py /app/main.py
+
+ENTRYPOINT [ "python3", "main.py" ]

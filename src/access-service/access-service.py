@@ -8,12 +8,11 @@ class EdgeAccess:
     heartbeat_timeout_s = 30
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def __init__(self, scheduler: s.Scheduler, logger, diagnostics, cloud_address, ip=None, port=2004):
+    def __init__(self, scheduler: s.Scheduler, logger, diagnostics, ip=None, port=2004):
         self.scheduler = scheduler
         self.logger = logger
         self.diagnostics = diagnostics
         self.port = port
-        self.cloud_address = (socket.gethostbyname(cloud_address[0]), cloud_address[1])
 
         if ip != None:
             self.ip = ip
@@ -65,80 +64,86 @@ class EdgeAccess:
         diagnostics.addDeadlineTask(False)
         return False
     
-
     # Called when a task is submitted to the access server by a client.
-    def scheduleTask(self, header, raw_payload, diagnostics, timeout=5):
+    def scheduleTask(self, header, raw_payload, diagnostics, edge_timeout=5):
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
-        memory_mb = task.memory_requirement_mb
 
-        processing_time = 0
-
-        # Try again at most 100 times if a node isn't responding
-        for _ in range(100):
-            scheduled_on_edge = True
-
+        # Attempt to make a connection to a node at most 3 times
+        for i in range(3):
+            # Schedule either an edge or cloud node
+            scheduled_node = self.scheduler.schedule(task.memory_requirement_mb)
+        
+            # Try to connect to remote node
             try:
-                # raise s.NoNodesExeception  # TODO: remove this line when scheduler is ready
-                address = self.scheduler.schedule(memory_mb=memory_mb)
-                self.logger.debug(f"Scheduled task on node {address}")
-            # except s.NoNodesExeception:
-                # return net.createResponse(False, b"There are no available clients to perform the task").SerializeToString()
-            # except s.NodeResourceExecpetion as e:
-                # return net.createResponse(False, e.__str__().encode()).SerializeToString()
-            except (s.NoNodesExeception, s.NodeResourceExecpetion):
-                address = self.cloud_address
-                scheduled_on_edge = False
-                self.logger.debug(f"Sent task to cloud")
+                remote_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                remote_connection.settimeout(2)
+                remote_connection.connect(scheduled_node.address)
 
-            connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            
-            if (scheduled_on_edge):
-                connection.settimeout(timeout)
-            else:
-                connection.settimeout(timeout*2.5)
-
-            ip = address[0]
-            port = address[1]
-
-            try:
-                connection.connect((ip, port))
-                break
+            # Node is not alive - remove from registry
             except (ConnectionRefusedError, TimeoutError):
-                if scheduled_on_edge:
-                    self.logger.warning(f"Node {ip}:{port} is not responding! Removing from registry")
-
-                    self.scheduler.removeNode(address)
+                if scheduled_node.node_type == s.NodeType.CLOUD:
+                    self.logger.warning(f"Cloud service at {scheduled_node.address} is not responding!")
                 else:
-                    self.logger.error(f"Cloud service at {ip}:{port} is not responding!")
-                    return net.createResponse(False, b"Cloud service offline!").SerializeToString()
+                    self.logger.warning(f"Node {scheduled_node.address} is not responding! Removing from registry")
+                
+                self.scheduler.removeNode(scheduled_node)
+                continue
 
-            except Exception:
-                traceback.print_exc()
+            # Increase timeout for tasks scheduled on the cloud
+            if scheduled_node.node_type == s.NodeType.CLOUD:
+                self.logger.info("Scheduled task on the cloud")
+                remote_connection.settimeout(edge_timeout * 2)
+            else:
+                self.logger.info(f"Scheduled task on the edge node {scheduled_node.address}")
+                remote_connection.settimeout(edge_timeout)
 
-        try:
+            # Start the processing time timer
             start = time.perf_counter()
-            net.send(connection, header, raw_payload)
+
+            # Attempt to schedule the task on the remote node
+            try:
+                net.send(remote_connection, header, raw_payload)
+                _, response = net.recv(remote_connection)
             
-            _, response = net.recv(connection)
-            end = time.perf_counter()
+            # Node timed out - attempt to schedule another node
+            except TimeoutError:
+                logging.warning(f"Remote node {scheduled_node.address} timed out during task execution - attempting to reschedule")
+                continue
 
-            processing_time = end - start
+            # Connection reset by node - attempt to schedule another node
+            except ConnectionResetError:
+                logging.warning(f"Remote node {scheduled_node.address} reset connection - attempting to reschedule")
+                continue
 
+            # Broken pipe error - attempt to schedule another node
+            except BrokenPipeError:
+                logging.warning(f"Remote node {scheduled_node.address} - broken pipe error - attempting to reschedule")
+                continue
+
+            finally:
+                remote_connection.close()
+
+                # Stop the processing time timer
+                end = time.perf_counter()
+
+                # Calculate the processing time
+                processing_time = end - start
+                
+                # Reset the scheduled node
+                self.scheduler.resetNode(scheduled_node, processing_time)
+
+            # Log diagnostic information
             diagnostics.incrementProcessingTime(processing_time, task.taskID)
             deadline_hit = self.calculateDeadlineHit(raw_payload, processing_time, diagnostics)
-            
             #TODO: make work with cloud nodes -----------------------------------------
             #self.diagnostics.addJob(task.taskID, (ip, port), processing_time*1000, task.deadline_ms, deadline_hit)
 
+            # Forward the raw response received from the remote node
             return response
-        except TimeoutError:
-            return net.createResponse(False, b"Node timedout").SerializeToString()
-        finally:
-            connection.close()
-
-            if scheduled_on_edge:
-                self.scheduler.resetNode(address, memory_mb, processing_time*1000)
+        
+        # Couldn't find an edge or cloud node in 3 attempts
+        return net.createResponse(False, b"Could not find an available node to schedule the task").SerializeToString()
 
     # Called when an edge client sends a heartbeat signal. Sets the client's 
     # has timed out flag to false. 
@@ -210,11 +215,17 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    scheduler = s.RoundRobinWithAllocation()
+    # cloud_ip = "LB1-6c7327e45f7a7b95.elb.eu-north-1.amazonaws.com"
+    # cloud_ip = socket.gethostbyname(cloud_ip)
+    # cloud_port = 8000
+    # cloud_address = (cloud_ip, cloud_port)
+    cloud_address = ("127.0.0.1", 16225)
+    
+    scheduler = s.RoundRobinEdgeCloud(cloud_address)
     logger = logging.getLogger(__name__)
     
     diagnostics = Diagnostics(
-        measurement_interval_s=4,
+        measurement_interval_s=30,
         scheduler=scheduler, 
         display=True
     )
@@ -222,9 +233,7 @@ def main():
     access_server = EdgeAccess(
         scheduler=scheduler,
         logger= logger,
-        diagnostics=diagnostics,
-        # cloud_address=("10.45.1.34", 16225)
-        cloud_address=("ec2-51-21-247-208.eu-north-1.compute.amazonaws.com", 16225)
+        diagnostics=diagnostics
     )
 
     access_server.serve()    

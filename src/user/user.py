@@ -136,12 +136,16 @@ def main(address):
         with open("src/user/test_data/human.jpg", "rb") as f:
                 image_bytes = f.read()
 
+        average = 0
+        count = 0
+
         while True:
             deadline = 1000
             
             start_time = time.perf_counter()
 
-            task_id = random.randint(0, 2)
+            task_id = random.randint(0, 5)
+            # task_id = 1
             match task_id:
                 case 0:
                         print("DETECT HUMAN")
@@ -179,6 +183,31 @@ def main(address):
 
             print(f"Time Elapsed {time_elapsed}")
             print(f"Response {response}")
+
+            count += 1
+            average += time_elapsed
+
+            # DETECT HUMAN
+            # 1.1160841004375834 - edge
+            # 2.188686801258009 - cloud
+
+            # Fruit Quality
+            # 1.8 - edge
+
+            # Fruit Classification
+            # 2.7 - edge
+
+            # ADDITION
+            # 0.33268524723127485 - edge
+            # 0.7569616792385933 - cloud
+
+            if (count % 100 == 0):
+                print(f"Average processing time over last 100 tasks: {average/count} --------------------------------------------------------------------------")
+                count = 0
+                average = 0
+
+            if (not response.success):
+                time.sleep(5)
 
     except Exception as e:
         print("CLIENT SIDE EXECEPTION")

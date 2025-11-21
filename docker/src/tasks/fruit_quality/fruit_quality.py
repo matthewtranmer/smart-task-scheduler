@@ -16,7 +16,7 @@ def isFruitFresh(image_bytes: bytes):
     from keras.preprocessing import image
 
     # Load trained model into memory
-    model = load_model("/app/tasks/fruit_quality/banana_freshness_model_final.h5", compile=False)  # or banana_freshness_model_final.h5
+    model = load_model("/app/src/tasks/fruit_quality/banana_freshness_model_final.h5", compile=False)  # or banana_freshness_model_final.h5
 
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     img = img.resize((150, 150))

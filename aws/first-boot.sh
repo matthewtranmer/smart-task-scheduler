@@ -50,18 +50,31 @@ sudo -u "$USER" docker build "$APP_DIR/src/task_sandbox" -t task_sandbox
 
 chmod +x "$APP_DIR/run/task-server-cloud.sh"
 
+sleep 3
+
 # Create the systemd service
 cat > /etc/systemd/system/task-server-cloud.service << EOF
 [Unit]
 Description=Task server
-After=network.target
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
-Type=simple
 User=$USER
+Group=docker
 WorkingDirectory=$APP_DIR
 ExecStart=$APP_DIR/run/task-server-cloud.sh
-Restart=on-failure
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+TimeoutStopSec=5
+KillSignal=SIGINT
+
+Type=simple
 
 [Install]
 WantedBy=multi-user.target
@@ -69,4 +82,6 @@ EOF
 
 systemctl daemon-reload
 systemctl enable task-server-cloud.service
+
+sleep 3
 systemctl start task-server-cloud.service
