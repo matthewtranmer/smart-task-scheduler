@@ -1,3 +1,4 @@
+import sys
 import docker, socket, random, os, json
 from docker.types import LogConfig
 import threading
@@ -96,12 +97,19 @@ class Container:
             if output == "":
                 continue
 
-            # Parse output from container
-            parsed_output = json.loads(output)
-
+            try:
+                # Parse output from container
+                parsed_output = json.loads(output)
+            except json.JSONDecodeError:
+                print(output, file=sys.stderr)
+                continue
+                
             # Handle container errors
             if (error):
-                raise InternalContainerError(parsed_output["value"])
+                try:
+                    raise InternalContainerError(parsed_output["value"])
+                except KeyError:
+                    raise InternalContainerError(output)
 
             received_inputID = parsed_output["inputID"]
 

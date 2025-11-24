@@ -9,6 +9,9 @@ def main():
                 if len(line) == 0:
                     continue
 
+                # print(line, flush=True)
+                # return
+
                 input = json.loads(line)
                 parameters = json.loads(input["params"])
 
@@ -18,7 +21,6 @@ def main():
                 print(json.dumps(response), flush=True)  
 
         except Exception:
-            print(222222222)
             exception = traceback.format_exc()
             response = {"value": exception}
             print(json.dumps(response), file=sys.stderr, flush=True)

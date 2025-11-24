@@ -2,12 +2,18 @@ import socket, time, threading, json, random, os, traceback, sys, base64
 from lib import edge_pb2, net
 from lib.scheduler import Tasks 
 
+def decode_binary(binary_in: str) -> bytes:
+    return base64.decodebytes(binary_in.encode())
+
+def encode_binary(binary_in: bytes) -> str:
+    return base64.encodebytes(binary_in).decode()
+
 class TaskOffloader:
     def __init__(self, access_server_addr):
         self.access_server_addr = access_server_addr
 
     def detectHuman(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
+        payload = json.dumps({"img_bytes": encode_binary(image_bytes)}).encode()
 
         task = net.createTask(
             taskID=Tasks.DETECT_HUMAN,
@@ -20,7 +26,7 @@ class TaskOffloader:
         return self._submitTask(task)
 
     def classifyFruit(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
+        payload = json.dumps({"img_bytes": encode_binary(image_bytes)}).encode()
 
         task = net.createTask(
             taskID=Tasks.CLASSIFY_FRUIT,
@@ -33,7 +39,7 @@ class TaskOffloader:
         return self._submitTask(task)
 
     def fruitQuality(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": base64.encodebytes(image_bytes).decode()}).encode()
+        payload = json.dumps({"img_bytes": encode_binary(image_bytes)}).encode()
 
         task = net.createTask(
             taskID=Tasks.FRUIT_QUALITY,
@@ -46,7 +52,7 @@ class TaskOffloader:
         return self._submitTask(task)
 
     def compress(self, data, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"data": data}).encode()
+        payload = json.dumps({"data": encode_binary(data)}).encode()
 
         task = net.createTask(
             taskID=Tasks.COMPRESSION,
@@ -144,8 +150,8 @@ def main(address):
             
             start_time = time.perf_counter()
 
-            task_id = random.randint(0, 5)
-            # task_id = 1
+            # task_id = random.randint(0, 2)
+            task_id = 4
             match task_id:
                 case 0:
                         print("DETECT HUMAN")
@@ -157,20 +163,27 @@ def main(address):
                         print("FRUIT QUALITY")
                         response = offloader.fruitQuality(image_bytes, deadline)
                 case 3:
+                        print("ENCRYPTION")
+                        response = offloader.encrypt("keykeykeykeykey1", "This is some plaintext data to be encrypted.", deadline)
+                case 4:
+                        print("COMPRESSION")
+                        data = "This is some data that needs to be compressed. " * 20
+                        response = offloader.compress(data, deadline)
+                case 5:
                         print("ADDITION")
 
                         a = random.randint(1, 99)
                         b = random.randint(1, 99)
 
                         response = offloader.addition(a, b, deadline)
-                case 4:
+                case 6:
                         print("MULTIPLICATION")
 
                         a = random.randint(1, 99)
                         b = random.randint(1, 99)
 
                         response = offloader.multiplication(a, b, deadline)
-                case 5:
+                case 7:
                         print("DIVISION")
 
                         a = random.randint(1, 99)

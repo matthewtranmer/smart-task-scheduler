@@ -11,21 +11,25 @@ from src.tasks.addition.addition import addition
 from src.tasks.multiplication.multiplication import multiplication
 from src.tasks.division.division import division
 
-def decode_image(image_in: str) -> bytes:
-    return base64.decodebytes(image_in.encode())
+def decode_binary(binary_in: str) -> bytes:
+    return base64.decodebytes(binary_in.encode())
+
+def encode_binary(binary_in: bytes) -> str:
+    return base64.encodebytes(binary_in).decode()
 
 def run_task(taskID, parameters: dict):
     result = ""
 
     match taskID:
         case 0:
-            result = detectHuman(decode_image(parameters["img_bytes"]))
+            result = detectHuman(decode_binary(parameters["img_bytes"]))
         case 1:
-            result = classifyFruit(decode_image(parameters["img_bytes"]))
+            result = classifyFruit(decode_binary(parameters["img_bytes"]))
         case 2:
-            result = fruitQuality(decode_image(parameters["img_bytes"]))
+            result = fruitQuality(decode_binary(parameters["img_bytes"]))
         case 3:
-            result = compress(parameters["data"])
+            result_binary = compress(decode_binary(parameters["data"]))
+            result = encode_binary(result_binary)
         case 4:
             result = encrypt(parameters["key"], parameters["plaintext"])
 
