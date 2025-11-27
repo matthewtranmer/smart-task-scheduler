@@ -64,7 +64,7 @@ def isFruitOrangeOrBanana(img_bytes: bytes, interpreter, input_index: int, outpu
 
     return "none"
 
-def main(img_bytes: bytes):
+def main(img_bytes: bytes) -> bytes:
     # Load model
     with suppress_stderr_fd():
         interpreter = tflite.Interpreter(model_path="/app/src/tasks/classify_fruit/mobilenet_v2_imagenet.tflite")
@@ -76,9 +76,9 @@ def main(img_bytes: bytes):
     input_index = input_details[0]["index"]
     output_index = output_details[0]["index"]
 
-    return isFruitOrangeOrBanana(img_bytes, interpreter, input_index, output_index)
+    return isFruitOrangeOrBanana(img_bytes, interpreter, input_index, output_index).encode()
 
-def classifyFruit(img_bytes: bytes):
+def classifyFruit(img_bytes: bytes) -> bytes:
     with mp.Pool(1) as pool:
         response = pool.apply(main, args=(img_bytes,))
 

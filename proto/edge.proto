@@ -31,3 +31,12 @@ message Response {
     int32 code = 2;
     bytes value = 3;
 }
+
+message ContainerResponse{
+    bytes value = 1;
+    int32 inputID = 2;
+    int32 processing_time_ms = 3;
+
+    bool error = 4;
+    string traceback = 5;
+}

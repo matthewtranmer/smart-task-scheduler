@@ -23,9 +23,11 @@ RUN mkdir -p /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/ab
     && chmod 1777 /tmp /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing \
     && chown -R root:root /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing
 
-RUN pip install tflite-runtime pillow keras cryptography
+RUN pip install tflite-runtime pillow keras cryptography protobuf
 RUN pip install numpy==1.24.0
 COPY docker/images/task_sandbox/main.py /app/main.py
 COPY docker/src/ /app/src/
+COPY lib/edge_pb2.py /app/lib/edge_pb2.py
+COPY lib/scheduler.py /app/lib/scheduler.py
 
 ENTRYPOINT [ "python3", "-u", "main.py" ]

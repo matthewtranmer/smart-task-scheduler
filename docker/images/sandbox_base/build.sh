@@ -1,1 +1,0 @@
-docker build ./docker/images/sandbox_base -t matthewtranmer/sandbox_base 

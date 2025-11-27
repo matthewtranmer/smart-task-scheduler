@@ -114,10 +114,14 @@ class EdgeClient:
                 scheduled_container = pool_container.container
                 
                 try:
-                    response, processing_time = scheduled_container.executeTask(task)
-                    self.logger.info(f"Executed task with id {task.taskID}, processing time {processing_time}ms")
+                    response = scheduled_container.executeTask(task)
+                    self.logger.info(f"Executed task with id {task.taskID}, processing time {response.processing_time_ms}ms")
 
-                    return net.createResponse(True, response.encode())
+                    if (response.error):
+                        self.logger.info(response.traceback)
+                        return net.createResponse(False, response.traceback)
+
+                    return net.createResponse(True, response.value)
 
                 except container.InternalContainerError as e:
                     self.logger.exception(e)

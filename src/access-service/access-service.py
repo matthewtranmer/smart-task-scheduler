@@ -1,3 +1,4 @@
+import random
 import socket, threading, logging, traceback, time, json
 from lib import edge_pb2, net
 from lib import scheduler as s
@@ -53,11 +54,11 @@ class EdgeAccess:
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
     #Returns true on deadline hit, false on deadline miss
-    def calculateDeadlineHit(self, raw_payload, processing_time, diagnostics) -> bool:
+    def calculateDeadlineHit(self, raw_payload, processing_time_ms, diagnostics) -> bool:
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
 
-        if (processing_time * 1000 < task.deadline_ms):
+        if (processing_time_ms < task.deadline_ms):
             diagnostics.addDeadlineTask(True)
             return True
         
@@ -68,6 +69,7 @@ class EdgeAccess:
     def scheduleTask(self, header, raw_payload, diagnostics, edge_timeout=5):
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
+        task.inputID = random.randint(1000000000,2147483640)
 
         # Attempt to make a connection to a node at most 3 times
         for i in range(3):
@@ -92,10 +94,10 @@ class EdgeAccess:
 
             # Increase timeout for tasks scheduled on the cloud
             if scheduled_node.node_type == s.NodeType.CLOUD:
-                self.logger.info("Scheduled task on the cloud")
+                self.logger.debug("Scheduled task on the cloud")
                 remote_connection.settimeout(edge_timeout * 2)
             else:
-                self.logger.info(f"Scheduled task on the edge node {scheduled_node.address}")
+                self.logger.debug(f"Scheduled task on the edge node {scheduled_node.address}")
                 remote_connection.settimeout(edge_timeout)
 
             # Start the processing time timer
@@ -103,7 +105,7 @@ class EdgeAccess:
 
             # Attempt to schedule the task on the remote node
             try:
-                net.send(remote_connection, header, raw_payload)
+                net.send(remote_connection, header, task.SerializeToString())
                 _, response = net.recv(remote_connection)
             
             # Node timed out - attempt to schedule another node
@@ -127,8 +129,8 @@ class EdgeAccess:
                 # Stop the processing time timer
                 end = time.perf_counter()
 
-                # Calculate the processing time
-                processing_time = end - start
+                # Calculate the processing time in ms
+                processing_time = (end - start) * 1000
                 
                 # Reset the scheduled node
                 self.scheduler.resetNode(scheduled_node, processing_time)
@@ -137,7 +139,9 @@ class EdgeAccess:
             diagnostics.incrementProcessingTime(processing_time, task.taskID)
             deadline_hit = self.calculateDeadlineHit(raw_payload, processing_time, diagnostics)
             #TODO: make work with cloud nodes -----------------------------------------
-            #self.diagnostics.addJob(task.taskID, (ip, port), processing_time*1000, task.deadline_ms, deadline_hit)
+            self.diagnostics.addJob(task.taskID, scheduled_node.address, processing_time, task.deadline_ms, deadline_hit)
+
+            self.diagnostics.incrementTasks()
 
             # Forward the raw response received from the remote node
             return response
@@ -193,7 +197,6 @@ class EdgeAccess:
             # Schedule task
             case net.Commands.SCHEDULE_TASK:
                 response = self.scheduleTask(parsed_header, raw_payload, self.diagnostics)
-                self.diagnostics.incrementTasks()
             # Heartbeat
             case net.Commands.HEARTBEAT:
                 response = self.heartbeat(raw_payload)
@@ -211,7 +214,7 @@ def main():
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
         #filename='edge-access-log',
-        level=logging.DEBUG,
+        level=logging.INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
@@ -225,7 +228,7 @@ def main():
     logger = logging.getLogger(__name__)
     
     diagnostics = Diagnostics(
-        measurement_interval_s=30,
+        measurement_interval_s=20,
         scheduler=scheduler, 
         display=True
     )

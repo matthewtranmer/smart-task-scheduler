@@ -50,7 +50,7 @@ def isFruitFresh(image_bytes: bytes, interpreter, input_details, output_details)
 
     return prediction >= 0.5
 
-def main(image_bytes: bytes):
+def main(image_bytes: bytes) -> bytes:
     TFLITE_MODEL_PATH = "/app/src/tasks/fruit_quality/banana_freshness.tflite"
 
     with suppress_stderr_fd():
@@ -61,9 +61,12 @@ def main(image_bytes: bytes):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    return isFruitFresh(image_bytes, interpreter, input_details, output_details)
+    if isFruitFresh(image_bytes, interpreter, input_details, output_details):
+        return b"true"
+    
+    return b"false"
 
-def fruitQuality(image_bytes: bytes):
+def fruitQuality(image_bytes: bytes) -> bytes:
     with mp.Pool(1) as pool:
         response = pool.apply(main, args=(image_bytes,))
 

@@ -19,7 +19,9 @@ class Tasks():
     CLASSIFY_FRUIT = 1
     FRUIT_QUALITY = 2
     COMPRESSION = 3
-    ENCRYPTION = 4
+    DECOMPRESSION = 4
+    ENCRYPTION = 5
+    DECRYPTION = 6
     ADDITION = 100
     MULTIPLICATION = 101
     DIVISION = 102
@@ -79,6 +81,7 @@ class Scheduler:
         except KeyError:
             self.nodes.append(node)
             self.next_id += 1
+
             return True
 
     def _findNodeIndex(self, address):
@@ -99,7 +102,7 @@ class Scheduler:
     def removeNode(self, scheduled_node: ScheduledNode) -> bool:
         if (scheduled_node.node_type == NodeType.CLOUD):
             return
-
+        
         try:
             node_index = self._findNodeIndex(scheduled_node.address)
         except KeyError:
@@ -153,33 +156,43 @@ class RoundRobinWithAllocation(Scheduler):
         if (len(self.nodes) <= 0):
             raise NoNodesExeception("There are no nodes available to perform the task")
 
+        if (self.index >= len(self.nodes)):
+            self.index = 0
         start_index = self.index
-
+        
         foundNodeWithCPU = False
         foundNodeWithMemory = False
         while True:
             scheduled_node = None
 
+            # try:
+            # Found a node with enough CPU
             if self.nodes[self.index]["cpus_available"] > 0:
                 foundNodeWithCPU = True
 
+            # Found a node with enough memory
             if self.nodes[self.index]["memory_available"] > memory_mb:
                 foundNodeWithMemory = True
 
+            # Node has both enough cpu and memory to schedule task
             if self.nodes[self.index]["cpus_available"] > 0 and self.nodes[self.index]["memory_available"] > memory_mb:
                 scheduled_node = self.nodes[self.index]
 
                 scheduled_node["cpus_available"] -= 1
                 scheduled_node["memory_available"] -= memory_mb
                 scheduled_node["assigned_tasks"] += 1
+            # except IndexError:
+            #     raise NoNodesExeception("There are no nodes available to perform the task")
 
             self.index += 1
             if (self.index >= len(self.nodes)):
                 self.index = 0
 
+            # Found a suitable node
             if scheduled_node != None:
                 return ScheduledNode(scheduled_node["address"], NodeType.EDGE, memory_mb=memory_mb)
 
+            # Wrap around - checked all nodes
             if self.index == start_index:
                 # Couldnt find a node with either enough cpu and memory
                 if not foundNodeWithCPU and not foundNodeWithMemory:
@@ -222,7 +235,7 @@ class RoundRobinEdgeCloud(RoundRobinWithAllocation):
     def schedule(self, memory_mb):
         try:
             return super().schedule(memory_mb)
-        except (NoNodesExeception, NodeResourceExecpetion):
+        except (NoNodesExeception, NodeResourceExecpetion) as e:
             return ScheduledNode(self.cloud_address, NodeType.CLOUD, memory_mb)
         
     def resetNode(self, scheduledNode, processing_time_ms):

@@ -1,157 +1,21 @@
 import socket, time, threading, json, random, os, traceback, sys, base64
-from lib import edge_pb2, net
+from lib import edge_pb2, net, taskoffloader
 from lib.scheduler import Tasks 
-
-def decode_binary(binary_in: str) -> bytes:
-    return base64.decodebytes(binary_in.encode())
-
-def encode_binary(binary_in: bytes) -> str:
-    return base64.encodebytes(binary_in).decode()
-
-class TaskOffloader:
-    def __init__(self, access_server_addr):
-        self.access_server_addr = access_server_addr
-
-    def detectHuman(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": encode_binary(image_bytes)}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.DETECT_HUMAN,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def classifyFruit(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": encode_binary(image_bytes)}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.CLASSIFY_FRUIT,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def fruitQuality(self, image_bytes, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"img_bytes": encode_binary(image_bytes)}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.FRUIT_QUALITY,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def compress(self, data, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"data": encode_binary(data)}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.COMPRESSION,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def encrypt(self, key, plaintext, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"key": key, "plaintext": plaintext}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.ENCRYPTION,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def addition(self, a, b, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"a": a, "b": b}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.ADDITION,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def multiplication(self, a, b, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"a": a, "b": b}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.MULTIPLICATION,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def division(self, a, b, deadline) -> edge_pb2.Response:
-        payload = json.dumps({"a": a, "b": b}).encode()
-
-        task = net.createTask(
-            taskID=Tasks.DIVISION,
-            input=payload,
-            memory_requirement_mb=300,
-            deadline_ms=deadline,
-            inputID=random.randint(10000,9999999)
-        )
-
-        return self._submitTask(task)
-
-    def _submitTask(self, task) -> edge_pb2.Response:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(self.access_server_addr)
-
-        header = net.createHeader(net.Commands.SCHEDULE_TASK)
-
-        serialised_task = task.SerializeToString()
-        print(f"Task length: {len(serialised_task)}")
-        net.send(sock, header, serialised_task)
-
-        _, payload = net.recv(sock)
-
-        sock.close()
-
-        response = edge_pb2.Response()
-        response.ParseFromString(payload)
-
-        return response
 
 def main(address):
     try:
-        offloader = TaskOffloader(address)
+        offloader = taskoffloader.TaskOffloader(address)
 
         with open("src/user/test_data/human.jpg", "rb") as f:
                 image_bytes = f.read()
-
-        average = 0
-        count = 0
 
         while True:
             deadline = 1000
             
             start_time = time.perf_counter()
 
-            # task_id = random.randint(0, 2)
-            task_id = 4
+            task_id = random.randint(0, 2)
+            # task_id = 7
             match task_id:
                 case 0:
                         print("DETECT HUMAN")
@@ -163,27 +27,34 @@ def main(address):
                         print("FRUIT QUALITY")
                         response = offloader.fruitQuality(image_bytes, deadline)
                 case 3:
-                        print("ENCRYPTION")
-                        response = offloader.encrypt("keykeykeykeykey1", "This is some plaintext data to be encrypted.", deadline)
-                case 4:
                         print("COMPRESSION")
                         data = "This is some data that needs to be compressed. " * 20
                         response = offloader.compress(data, deadline)
+                case 4:
+                        print("DECOMPRESSION")
+                        data = "This is some data that needs to be compressed. " * 20
+                        response = offloader.decompress(data, deadline)
                 case 5:
+                        print("ENCRYPTION")
+                        response = offloader.encrypt("keykeykeykeykey1", "This is some plaintext data to be encrypted.", deadline)
+                case 6:
+                        print("DECRYPTION")
+                        response = offloader.decrypt("keykeykeykeykey1", "U2FsdGVkX1+I3V6Y5G6u1g6X9s6jZ0bX5Zl5r8QvV3I=", deadline)
+                case 7:
                         print("ADDITION")
 
                         a = random.randint(1, 99)
                         b = random.randint(1, 99)
 
                         response = offloader.addition(a, b, deadline)
-                case 6:
+                case 8:
                         print("MULTIPLICATION")
 
                         a = random.randint(1, 99)
                         b = random.randint(1, 99)
 
                         response = offloader.multiplication(a, b, deadline)
-                case 7:
+                case 9:
                         print("DIVISION")
 
                         a = random.randint(1, 99)
@@ -192,32 +63,10 @@ def main(address):
                         response = offloader.division(a, b, deadline)
 
             end_time = time.perf_counter()
-            time_elapsed = end_time - start_time
+            time_elapsed_ms = int((end_time - start_time)*1000)
 
-            print(f"Time Elapsed {time_elapsed}")
+            print(f"Time Elapsed {time_elapsed_ms}ms")
             print(f"Response {response}")
-
-            count += 1
-            average += time_elapsed
-
-            # DETECT HUMAN
-            # 1.1160841004375834 - edge
-            # 2.188686801258009 - cloud
-
-            # Fruit Quality
-            # 1.8 - edge
-
-            # Fruit Classification
-            # 2.7 - edge
-
-            # ADDITION
-            # 0.33268524723127485 - edge
-            # 0.7569616792385933 - cloud
-
-            if (count % 100 == 0):
-                print(f"Average processing time over last 100 tasks: {average/count} --------------------------------------------------------------------------")
-                count = 0
-                average = 0
 
             if (not response.success):
                 time.sleep(5)

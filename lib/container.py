@@ -77,51 +77,44 @@ class Container:
     # Handle bizantine execptions
     # handle timeout
 
-    def executeTask(self, task: edge_pb2.Task) -> tuple[str, float]:
+    def executeTask(self, task: edge_pb2.Task) -> edge_pb2.ContainerResponse:
         # Convert task into a JSON string to give to the container
-        container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
-        json_params = json.dumps(container_params)
+        # container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
+        # json_params = json.dumps(container_params)
 
         # Start execution time counter
         start_time = time.perf_counter()
         # Send task to container
-        self.send(json_params.encode())
+        self.send(task.SerializeToString())
 
-        received_inputID = -1
-        output = ""
+        response = edge_pb2.ContainerResponse()
+        inputID = -2147483648
+
         # Continue until we receive the indended output 
-        while received_inputID != task.inputID:
+        while inputID != task.inputID:
             output, error = self.receive()
 
             # EOF from container, ignore
             if output == "":
                 continue
 
-            try:
-                # Parse output from container
-                parsed_output = json.loads(output)
-            except json.JSONDecodeError:
-                print(output, file=sys.stderr)
-                continue
-                
             # Handle container errors
             if (error):
-                try:
-                    raise InternalContainerError(parsed_output["value"])
-                except KeyError:
-                    raise InternalContainerError(output)
-
-            received_inputID = parsed_output["inputID"]
+                raise InternalContainerError(output)
+                            
+            response.ParseFromString(output)
+            inputID = response.inputID
 
         # Calculate execution time
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
-            
-        return output, execution_time_ms
+        response.processing_time_ms = int(execution_time_ms)
+
+        return response
         
 
     def send(self, data: bytes):
-        self.sock._sock.sendall(data + b"\n")
+        self.sock._sock.sendall(len(data).to_bytes(4, "big", signed=False) + data)
 
     def _parseDockerHeader(self, header) -> dict:
         parsed_header = {}
@@ -146,18 +139,26 @@ class Container:
         data = self.sock._sock.recv(parsed_header["payload_length"])
         return (parsed_header, data)
 
-    def receive(self) -> tuple[str, bool]:
+    # Returns the data in bytes, and True on an unhandled error
+    def receive(self) -> tuple[bytes, bool]:
         header, payload = self._recv()
+
+        if header["stream"] == "stderr":
+            return payload, True
 
         if (header == None):
             return (payload, False)
         
-        error = False
-        if header["stream"] == "stderr":
-            error = True
+        received_data = payload[4:]
+        length_bytes = payload[:4]
+        buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
+
+        # 4 bytes for length
+        while len(received_data) < buffer_length:
+            header, payload = self._recv()
+            received_data += payload
         
-        data = payload.decode().strip()
-        return (data, error)
+        return (received_data, False)
     
     def stop(self):
         self.container.stop()

@@ -1,10 +1,11 @@
 import base64
+from lib.scheduler import Tasks
 
 from src.tasks.detect_human.detect_human import detectHuman
 from src.tasks.classify_fruit.classify_fruit import classifyFruit
 from src.tasks.fruit_quality.fruit_quality import fruitQuality
-from src.tasks.compression.compression import compress
-from src.tasks.encryption.encryption import encrypt
+from src.tasks.compression.compression import compress, decompress
+from src.tasks.encryption.encryption import encrypt, decrypt
 
 # Test tasks
 from src.tasks.addition.addition import addition
@@ -12,33 +13,40 @@ from src.tasks.multiplication.multiplication import multiplication
 from src.tasks.division.division import division
 
 def decode_binary(binary_in: str) -> bytes:
-    return base64.decodebytes(binary_in.encode())
+    b64_bytes = binary_in.encode()
+    raw_bytes = base64.decodebytes(b64_bytes)
+    return raw_bytes
 
 def encode_binary(binary_in: bytes) -> str:
-    return base64.encodebytes(binary_in).decode()
+    b64_bytes = base64.encodebytes(binary_in)
+    b64_string = b64_bytes.decode()
+    return b64_string
 
-def run_task(taskID, parameters: dict):
+def run_task(taskID: int, data: bytes) -> bytes:
     result = ""
 
     match taskID:
-        case 0:
-            result = detectHuman(decode_binary(parameters["img_bytes"]))
-        case 1:
-            result = classifyFruit(decode_binary(parameters["img_bytes"]))
-        case 2:
-            result = fruitQuality(decode_binary(parameters["img_bytes"]))
-        case 3:
-            result_binary = compress(decode_binary(parameters["data"]))
-            result = encode_binary(result_binary)
-        case 4:
-            result = encrypt(parameters["key"], parameters["plaintext"])
+        case Tasks.DETECT_HUMAN:
+            result = detectHuman(data)
+        case Tasks.CLASSIFY_FRUIT:
+            result = classifyFruit(data)
+        case Tasks.FRUIT_QUALITY:
+            result = fruitQuality(data)
+        case Tasks.COMPRESSION:
+            result = compress(data)
+        case Tasks.DECOMPRESSION:
+            result = decompress(data)
+        case Tasks.ENCRYPTION:
+            result = encrypt(data)
+        case Tasks.DECRYPTION:
+            result = decrypt(data)
 
         # Test tasks
-        case 100:
-            result = addition(parameters["a"], parameters["b"])
-        case 101:
-            result = multiplication(parameters["a"], parameters["b"])
-        case 102:
-            result = division(parameters["a"], parameters["b"])
+        case Tasks.ADDITION:
+            result = addition(data)
+        case Tasks.MULTIPLICATION:
+            result = multiplication(data)
+        case Tasks.DIVISION:
+            result = division(data)
 
     return result

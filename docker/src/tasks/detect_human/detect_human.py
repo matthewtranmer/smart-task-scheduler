@@ -1,4 +1,5 @@
 import io
+import json
 import numpy as np
 from PIL import Image
 from tflite_runtime.interpreter import Interpreter
@@ -83,16 +84,18 @@ class PersonDetector:
 
         return False
     
-def main(image_bytes: bytes) -> bool:
+def main(image_bytes: bytes) -> bytes:
     detector = PersonDetector(
         model_path="/app/src/tasks/detect_human/efficientdet_lite0.tflite",
         labels_path="/app/src/tasks/detect_human/labelmap.txt",
         score_threshold=0.4,
     )
 
-    return detector.image_has_person(image_bytes)
+    if detector.image_has_person(image_bytes):
+        return b"true"
+    return b"false"
     
-def detectHuman(image_bytes: bytes):
+def detectHuman(image_bytes: bytes) -> bytes:
     with mp.Pool(1) as pool:
         response = pool.apply(main, args=(image_bytes,))
 
