@@ -1,5 +1,6 @@
 import threading
 from lib import scheduler as s
+from lib import edge_pb2
 
 
 class Diagnostics:
@@ -7,6 +8,11 @@ class Diagnostics:
     job_history = []
 
     measurement_interval_s = 0
+
+    cloud_task_count = 0
+    cloud_percentage = 0
+    cloud_tasks_per_second = 0
+    edge_tasks_per_second = 0
 
     task_count = 0
     tasks_per_second = 0
@@ -28,24 +34,50 @@ class Diagnostics:
         self._mainLoop()
 
     def _mainLoop(self):
+        self._calculateCloudPercentage()
         self._calculateAverageProcessingTimes()
         self._calculateTasksPerSecond()
         self._calculateDeadlineHitRate()
         self.scheduler.calculateResourceUsage(self.measurement_interval_s)
+
+        self.cloud_task_count = 0
         
         threading.Timer(self.measurement_interval_s, self._mainLoop).start()
 
-    def addJob(self, task_id, address, processing_time_ms, deadline_ms, deadline_hit):
+    def addJob(self, task: edge_pb2.Task, scheduled_node: s.ScheduledNode, processing_time_ms: int):
+        self.incrementProcessingTime(processing_time_ms, task.taskID)
+
+        deadline_hit = False
+        if (processing_time_ms < task.deadline_ms):
+            deadline_hit = True
+        
+        self.addDeadlineTask(deadline_hit)
+        
+        if (scheduled_node.node_type == s.NodeType.EDGE):
+            assigned_node = f"edge-{self.scheduler.getNodeID(scheduled_node.address)}"
+        else:
+            self.cloud_task_count += 1
+            assigned_node = "cloud"
+
         self.job_history.append({
-            "name": s.Tasks.getName(task_id),
-            "assigned_node": f"edge-{self.scheduler.getNodeID(address)}",
-            "processing_time": round(processing_time_ms, 3),
-            "deadline": deadline_ms,
+            "name": s.Tasks.getName(task.taskID),
+            "assigned_node": assigned_node,
+            "processing_time": processing_time_ms,
+            "deadline": task.deadline_ms,
             "deadline_hit": deadline_hit
         })
 
         if (len(self.job_history) >= self.JOB_HISTORY_SIZE):
             self.job_history.pop(0)
+
+    def _calculateCloudPercentage(self):
+        if self.task_count <= 0:
+            self.cloud_percentage = 0
+        else:
+            self.cloud_percentage = round(self.cloud_task_count / self.task_count * 100, 1)
+
+        if (self.display):
+            print(f"Cloud percentage: {self.cloud_percentage}%")
 
     def _calculateDeadlineHitRate(self):
         task_count = self.deadline_misses + self.deadline_hits
@@ -88,7 +120,13 @@ class Diagnostics:
     # Called every task_measurement_interval_s
     def _calculateTasksPerSecond(self):
         self.tasks_per_second = round(self.task_count / self.measurement_interval_s, 3)
+        print(self.cloud_task_count)
+        self.cloud_tasks_per_second = round(self.cloud_task_count / self.measurement_interval_s, 3)
+        self.edge_tasks_per_second = round((self.task_count - self.cloud_task_count) / self.measurement_interval_s, 3)
+
         self.task_count = 0
+        self.cloud_task_count = 0
+        self.edge_task_count = 0
 
         if (self.display):
             print(f"Tasks per second: {self.tasks_per_second}")
@@ -150,7 +188,10 @@ class Diagnostics:
             "average_processing_time": self.average_processing_time,
             "online_nodes": online_nodes,
             "task_averages": task_averages,
-            "recent_jobs": self.job_history
+            "recent_jobs": self.job_history,
+            "cloud_percentage": self.cloud_percentage,
+            "edge_arrival_rate": self.edge_tasks_per_second,
+            "cloud_arrival_rate": self.cloud_tasks_per_second,
         }
 
         return data

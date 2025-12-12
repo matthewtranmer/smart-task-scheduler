@@ -2,7 +2,7 @@ import socket, threading, os, sys, logging
 from lib import edge_pb2, net, container, system
 
 class EdgeClient:
-    heartbeat_interval = 30
+    heartbeat_interval = 5
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def __init__(
@@ -161,8 +161,12 @@ class EdgeClient:
     # Function that sends a heartbeat to the access server every heartbeat_interval
     # seconds.
     def heartbeatSender(self):
-        self.sendHeartbeat()
-        print("sent heartbeat!")
+        try:
+            self.sendHeartbeat()
+            print("sent heartbeat!")
+
+        except Exception as e:
+            self.logger.exception(e)
 
         threading.Timer(self.heartbeat_interval, self.heartbeatSender).start()
 

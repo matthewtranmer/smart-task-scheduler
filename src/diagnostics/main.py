@@ -6,7 +6,7 @@ app = Flask(__name__)
 access_server_address = ("10.45.1.34", 2004)
 
 @app.route("/")
-def hello_world():
+def index():
     data = gatherDiagnostics()
     return render_template("index.html", data=data)
 

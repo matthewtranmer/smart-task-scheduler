@@ -6,7 +6,7 @@ from diagnostics import Diagnostics
 
     
 class EdgeAccess:
-    heartbeat_timeout_s = 30
+    heartbeat_timeout_s = 8
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def __init__(self, scheduler: s.Scheduler, logger, diagnostics, ip=None, port=2004):
@@ -53,18 +53,6 @@ class EdgeAccess:
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
-    #Returns true on deadline hit, false on deadline miss
-    def calculateDeadlineHit(self, raw_payload, processing_time_ms, diagnostics) -> bool:
-        task = edge_pb2.Task()
-        task.ParseFromString(raw_payload)
-
-        if (processing_time_ms < task.deadline_ms):
-            diagnostics.addDeadlineTask(True)
-            return True
-        
-        diagnostics.addDeadlineTask(False)
-        return False
-    
     # Called when a task is submitted to the access server by a client.
     def scheduleTask(self, header, raw_payload, diagnostics, edge_timeout=5):
         task = edge_pb2.Task()
@@ -136,10 +124,7 @@ class EdgeAccess:
                 self.scheduler.resetNode(scheduled_node, processing_time)
 
             # Log diagnostic information
-            diagnostics.incrementProcessingTime(processing_time, task.taskID)
-            deadline_hit = self.calculateDeadlineHit(raw_payload, processing_time, diagnostics)
-            #TODO: make work with cloud nodes -----------------------------------------
-            self.diagnostics.addJob(task.taskID, scheduled_node.address, processing_time, task.deadline_ms, deadline_hit)
+            self.diagnostics.addJob(task, scheduled_node, processing_time)
 
             self.diagnostics.incrementTasks()
 
@@ -228,7 +213,7 @@ def main():
     logger = logging.getLogger(__name__)
     
     diagnostics = Diagnostics(
-        measurement_interval_s=20,
+        measurement_interval_s=5,
         scheduler=scheduler, 
         display=True
     )

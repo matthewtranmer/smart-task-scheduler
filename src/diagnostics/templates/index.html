@@ -22,33 +22,69 @@
   </nav>
 
   <main class="container py-4">
-    <!-- KPI cards -->
     <div class="row g-3">
+      <!-- Task Arrival Rate KPI card -->
       <div class="col-12 col-lg-4">
         <div class="card card-kpi shadow-sm">
           <div class="card-body">
-            <div class="text-secondary small">Task Arrival Rate</div>
-            <div class="stat" id="kpi-arrival">{{ data.task_arrival_rate }}</div>
+            <div class="text-secondary small">Global Task Arrival Rate</div>
+            <div class="stat" id="kpi-arrival-global">{{ data.task_arrival_rate }}</div>
           </div>
         </div>
       </div>
-      <div class="col-6 col-lg-4">
+      <!-- Edge Task Arrival Rate KPI card -->
+      <div class="col-12 col-lg-4">
         <div class="card card-kpi shadow-sm">
           <div class="card-body">
-            <div class="text-secondary small">Deadline Hit Rate</div>
-            <div class="stat" id="kpi-hit">{{ data.deadline_hit_rate }}%</div>
+            <div class="text-secondary small">Edge Task Arrival Rate</div>
+            <div class="stat" id="kpi-arrival-edge">{{ data.edge_arrival_rate }}</div>
           </div>
         </div>
       </div>
-      <div class="col-6 col-lg-4">
+
+      <!-- Cloud Task Arrival Rate KPI card -->
+      <div class="col-12 col-lg-4">
         <div class="card card-kpi shadow-sm">
           <div class="card-body">
-            <div class="text-secondary small">Avg Processing Time</div>
-            <div class="stat" id="kpi-avg">{{ data.average_processing_time }} ms</div>
+            <div class="text-secondary small">Cloud Task Arrival Rate</div>
+            <div class="stat" id="kpi-arrival-cloud">{{ data.cloud_arrival_rate }}</div>
           </div>
         </div>
       </div>
     </div>
+
+    <div class="row g-3 mt-1">
+      <!-- Cloud Percentage KPI card -->
+      <div class="col-12 col-lg-4">
+        <div class="card card-kpi shadow-sm">
+          <div class="card-body">
+            <div class="text-secondary small">Cloud Percentage</div>
+            <div class="stat" id="kpi-cloud-percentage">{{ data.cloud_percentage }}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deadline Hit Rate KPI card -->
+      <div class="col-6 col-lg-4">
+        <div class="card card-kpi shadow-sm">
+          <div class="card-body">
+            <div class="text-secondary small">Deadline Hit Rate</div>
+            <div class="stat" id="kpi-deadline-hit">{{ data.deadline_hit_rate }}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Average Processing Time KPI card -->
+      <div class="col-6 col-lg-4">
+        <div class="card card-kpi shadow-sm">
+          <div class="card-body">
+            <div class="text-secondary small">Avg Processing Time</div>
+            <div class="stat" id="kpi-avg-processing">{{ data.average_processing_time }} ms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
     <div class="row g-4 mt-1">
       <div class="col-12 col-xl-6">
