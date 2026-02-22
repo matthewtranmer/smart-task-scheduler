@@ -3,14 +3,63 @@ import socket, threading, logging, traceback, time, json
 from lib import edge_pb2, net
 from lib import scheduler as s
 from diagnostics import Diagnostics
+from dataclasses import dataclass
+
+@dataclass
+class TaskInformation:
+    # The actual task to be scheduled
+    task: edge_pb2.Task
+
+    # Where the response needs to be sent
+    client_socket: socket.socket
+
+
+class PriorityTaskQueue:
+    queue: list[TaskInformation] = []
+
+    # Insert tasks into the queue based on their deadline
+    def add_task(self, new_task: TaskInformation):
+        for i in range(len(self.queue)):
+            if self.queue[i].task.deadline_ms > new_task.task.deadline_ms:
+                self.queue.insert(i, new_task)
+                return
+            
+        self.queue.append(new_task)
+
+    def flush_queue(self):
+        new_queue: list[TaskInformation] = []
+
+        # Create a new queue with the task information from this time step
+        for task in self.queue:
+            new_queue.append(task)
+
+        # Remove the items from the global queue that have been added to the 
+        # new queue.
+        # Done this way for thread safety 
+        for task in new_queue:
+            self.queue.remove(task)
+
+        return new_queue
 
     
 class EdgeAccess:
     heartbeat_timeout_s = 8
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    task_queue = PriorityTaskQueue()
 
-    def __init__(self, scheduler: s.Scheduler, logger, diagnostics, ip=None, port=2004):
+    def __init__(
+            self, 
+            scheduler: s.Scheduler, 
+            queue_wait_time_s: int, 
+            priority_task_threshold_s: int,
+            logger, 
+            diagnostics, 
+            ip=None, 
+            port=2004
+        ):
         self.scheduler = scheduler
+        self.queue_wait_time_s = queue_wait_time_s
+        self.priority_task_threshold_s = priority_task_threshold_s
         self.logger = logger
         self.diagnostics = diagnostics
         self.port = port
@@ -26,7 +75,9 @@ class EdgeAccess:
         self.server.listen()
 
     def serve(self, timeout=2):
+        # Init periodic function
         self.removeDeadClients()
+        self.run_tasks()
 
         self.logger.info(f"Starting access server on address {self.ip}:{self.port}")
 
@@ -53,16 +104,51 @@ class EdgeAccess:
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
-    # Called when a task is submitted to the access server by a client.
-    def scheduleTask(self, header, raw_payload, diagnostics, edge_timeout=5):
+    def handle_task(self, incoming_request, client_socket):
+        _, raw_payload = incoming_request
+
+        # Create the task object
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
         task.inputID = random.randint(1000000000,2147483640)
 
+        # If task deadline greater than threshold, add task to queue
+        if (task.deadline_ms / 1000 > self.priority_task_threshold_s):
+            self.task_queue.add_task(TaskInformation(task, client_socket))
+        else:
+            print("PRIORITY TASK! Fast tracking scheduling ********************************************************************")
+            threading.Thread(target=self.execute_task, args=(task, client_socket)).start()
+
+
+    def execute_task(self, task: edge_pb2.Task, client_socket: socket.socket):
+        # Send the task to a node
+        try:
+            response = self.send_to_node(task)
+        except s.NoNodesExeception as e:
+            response = net.createResponse(False, e.message.encode()).SerializeToString()
+
+        # Return the response to the remote client
+        header = net.createHeader(net.Commands.SCHEDULE_TASK)
+        net.send(client_socket, header, response)
+
+
+    # Called every queue_wait_time_s seconds
+    # Flushes the task queue; sceduling each task
+    def run_tasks(self):
+        queue: list[TaskInformation] = self.task_queue.flush_queue()
+
+        for task in queue:
+            self.logger.info(f"Executing task with ID {task.task.taskID} and deadline {task.task.deadline_ms}")
+            threading.Thread(target=self.execute_task, args=(task.task, task.client_socket)).start()
+
+        # Recall function after delay
+        threading.Timer(self.queue_wait_time_s, self.run_tasks).start()
+
+    def send_to_node(self, task, edge_timeout=5) -> bytes:
         # Attempt to make a connection to a node at most 3 times
-        for i in range(3):
-            # Schedule either an edge or cloud node
-            scheduled_node = self.scheduler.schedule(task.memory_requirement_mb)
+        for _ in range(3):
+            # Schedule either an edge or cloud node.
+            scheduled_node: s.ScheduledNode = self.scheduler.schedule(task.memory_requirement_mb)
         
             # Try to connect to remote node
             try:
@@ -93,6 +179,7 @@ class EdgeAccess:
 
             # Attempt to schedule the task on the remote node
             try:
+                header = net.createHeader(net.Commands.SCHEDULE_TASK)
                 net.send(remote_connection, header, task.SerializeToString())
                 _, response = net.recv(remote_connection)
             
@@ -132,8 +219,8 @@ class EdgeAccess:
             return response
         
         # Couldn't find an edge or cloud node in 3 attempts
-        return net.createResponse(False, b"Could not find an available node to schedule the task").SerializeToString()
-
+        raise s.NoNodesExeception("Could not find an available edge or cloud node to schedule the task")
+        
     # Called when an edge client sends a heartbeat signal. Sets the client's 
     # has timed out flag to false. 
     def heartbeat(self,raw_payload):
@@ -170,7 +257,7 @@ class EdgeAccess:
         if not added_node:
             return net.createResponse(False, b"Client already exists in the registry!")
 
-        self.logger.info(f"Regstering node {ip}:{port}")
+        self.logger.info(f"Regstering node {ip}:{port} with {registration.cpus} cpus and {registration.memory_mb}mb memory")
 
         return net.createResponse(True, b"Success").SerializeToString()
 
@@ -181,7 +268,13 @@ class EdgeAccess:
         match parsed_header.commandID:
             # Schedule task
             case net.Commands.SCHEDULE_TASK:
-                response = self.scheduleTask(parsed_header, raw_payload, self.diagnostics)
+                incoming_request = (parsed_header, raw_payload)
+                self.handle_task(incoming_request, sock)
+                
+                # Response will be sent in another method
+                return
+
+                # response = self.scheduleTask(parsed_header, raw_payload, self.diagnostics)
             # Heartbeat
             case net.Commands.HEARTBEAT:
                 response = self.heartbeat(raw_payload)
@@ -199,7 +292,7 @@ def main():
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
         #filename='edge-access-log',
-        level=logging.INFO,
+        level=logging.DEBUG,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
@@ -209,7 +302,7 @@ def main():
     # cloud_address = (cloud_ip, cloud_port)
     cloud_address = ("127.0.0.1", 16225)
     
-    scheduler = s.RoundRobinEdgeCloud(cloud_address)
+    scheduler = s.SchedulerV1(cloud_address, omega=0.01)
     logger = logging.getLogger(__name__)
     
     diagnostics = Diagnostics(
@@ -220,6 +313,8 @@ def main():
 
     access_server = EdgeAccess(
         scheduler=scheduler,
+        queue_wait_time_s=0.3,
+        priority_task_threshold_s=0.45,
         logger= logger,
         diagnostics=diagnostics
     )

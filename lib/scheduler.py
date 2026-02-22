@@ -1,3 +1,5 @@
+from multiprocessing import Lock
+
 class NoNodesExeception(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -55,8 +57,35 @@ class Scheduler:
     nodes = []
     next_id = 0
 
-    def schedule(self):
+    def schedule(self) -> ScheduledNode:
         raise NotImplementedError
+    
+    def calculateResourceUsage(self, sample_time_s) -> list:
+        for node in self.nodes:
+            cpu_time_per_second = node["cpu_time_ms"] // sample_time_s
+            available_processing_time = node["cpus"] * 1000
+
+            cpu_usage_percent = min(cpu_time_per_second / available_processing_time * 100, 100)
+            cpu_usage_percent = round(cpu_usage_percent, 2)
+
+            node["cpu_time_ms"] = 0
+            node["cpu_usage"] = cpu_usage_percent
+
+    def resetNode(self, scheduledNode: ScheduledNode, processing_time_ms) -> bool:
+        if scheduledNode.node_type == NodeType.CLOUD:
+            return True
+
+        try:
+            node_index = self._findNodeIndex(scheduledNode.address)
+        except KeyError:
+            return False
+
+        self.nodes[node_index]["cpus_available"] += 1
+        self.nodes[node_index]["memory_available"] += scheduledNode.memory_mb
+        self.nodes[node_index]["cpu_time_ms"] += processing_time_ms
+        self.nodes[node_index]["assigned_tasks"] -= 1
+
+        return True
 
     # Returns true if node is added to the registry, false if the node
     # already exists in the registry
@@ -204,30 +233,6 @@ class RoundRobinWithAllocation(Scheduler):
                 else:
                     raise NodeResourceExecpetion("There are no nodes with enough memory available")
 
-    def resetNode(self, scheduledNode: ScheduledNode, processing_time_ms) -> bool:
-        try:
-            node_index = self._findNodeIndex(scheduledNode.address)
-        except KeyError:
-            return False
-
-        self.nodes[node_index]["cpus_available"] += 1
-        self.nodes[node_index]["memory_available"] += scheduledNode.memory_mb
-        self.nodes[node_index]["cpu_time_ms"] += processing_time_ms
-        self.nodes[node_index]["assigned_tasks"] -= 1
-
-        return True
-
-    def calculateResourceUsage(self, sample_time_s) -> list:
-        for node in self.nodes:
-            cpu_time_per_second = node["cpu_time_ms"] // sample_time_s
-            available_processing_time = node["cpus"] * 1000
-
-            cpu_usage_percent = min(cpu_time_per_second / available_processing_time * 100, 100)
-            cpu_usage_percent = round(cpu_usage_percent, 2)
-
-            node["cpu_time_ms"] = 0
-            node["cpu_usage"] = cpu_usage_percent
-
 class RoundRobinEdgeCloud(RoundRobinWithAllocation):
     def __init__(self, cloud_address):
         self.cloud_address = cloud_address
@@ -243,7 +248,85 @@ class RoundRobinEdgeCloud(RoundRobinWithAllocation):
             super().resetNode(scheduledNode, processing_time_ms)
 
 
+#TODO:  CPUs available is becoming -1?????????????????/
 
+# TODO: not thread safe
+class SchedulerV1(Scheduler):
+    lock = Lock()
+
+    # High omega - score nodes with more free memory higher
+    # Low omega - score nodes with more free CPUs higher
+    def __init__(self, cloud_address, omega=0.8):
+        self.cloud_address = cloud_address
+        self.omega = omega
+
+    def schedule(self, task_memory_mb) -> ScheduledNode:
+        # pprint.pprint(self.nodes)
+
+        with self.lock:
+            best_node = None
+            top_score = 0
+
+            print("scores: ", end="")
+            # Find the node with the best score
+            for node in self.nodes:
+                node_score = self._score_node(node, task_memory_mb)
+
+                print(f"score:{node_score}, ", end="")
+
+                if (node_score > top_score):
+                    top_score = node_score
+                    best_node = node
+
+            # No edge nodes available to process task
+            if (top_score == 0):
+                print("GOT SCORE OF 0 - SENDING TO CLOUD")
+                return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
+
+            print("DIDN'T GET SCORE OF ZEROR - SENDING TO EDGE")
+            print(f"Best node had {best_node["cpus_available"]} CPUs available before scheduling")
+            print(f"Best node had {best_node["memory_available"]}mb available before scheduling")
+
+            best_node["cpus_available"] -= 1
+            best_node["memory_available"] -= task_memory_mb
+            best_node["assigned_tasks"] += 1
+
+            print(f"Best node now has {best_node["cpus_available"]} CPUs available after scheduling")
+            print(f"NEW memory availible: {best_node["memory_available"]}")
+
+            if (best_node["cpus_available"] < 0):
+                print("GONE NEGATIVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+
+            # Schedule to edge node with highest score
+            return ScheduledNode(best_node["address"], NodeType.EDGE, task_memory_mb)
+
+    def _score_node(self, node, task_memory_mb) -> int:
+        memory_available: int = node["memory_available"]
+        cpus_available: int = node["cpus_available"]
+
+        print(f"_score_node(): cpus available = {cpus_available}")
+
+        memory_total: int = node["memory"]
+        cpus_total: int = node["cpus"]
+
+        # Return score of 0 if there isn't enough memory on the node to perform the task
+        if (memory_available < task_memory_mb):
+            return 0
+        
+        # Return a score of 0 if there isn't a free CPU on the node to perform the task
+        if (cpus_available < 1):
+            return 0
+        
+        # Calculate resource used if task were to be scheduled
+        new_memory_usage: int = (memory_available - task_memory_mb) / memory_total   
+        new_CPU_usage: int = (cpus_available - 1) / cpus_total
+
+        # Score the node
+        score: int = (self.omega * new_memory_usage) +  (1 - self.omega) * new_CPU_usage
+        return score
+        
+        
+        
 
 
 

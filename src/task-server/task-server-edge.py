@@ -95,8 +95,8 @@ class EdgeClient:
         registration = edge_pb2.Registration()
         registration.IP = socket.inet_pton(socket.AF_INET, self.ip)
         registration.port = self.port
-        registration.cpus = len(system.getPhysicalCpuIds())
-        registration.memory_mb = system.getSystemMemoryMB()
+        registration.cpus = self.cpus
+        registration.memory_mb = self.memory_mb
 
         registration_bytes = registration.SerializeToString()
 
@@ -187,7 +187,9 @@ def main(address):
 
     edge_client = EdgeClient(
         logger=logger,
-        access_server_address=access_server_address
+        access_server_address=access_server_address,
+        cpus=4,
+        memory_mb=8000
     )
 
     edge_client.serve("task_sandbox", timeout=5)

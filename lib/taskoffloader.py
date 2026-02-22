@@ -16,7 +16,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.DETECT_HUMAN
         task.input = image_bytes
-        task.memory_requirement_mb 
+        task.memory_requirement_mb = 100
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)
@@ -25,7 +25,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.CLASSIFY_FRUIT
         task.input = image_bytes
-        task.memory_requirement_mb 
+        task.memory_requirement_mb = 300
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)
@@ -34,7 +34,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.FRUIT_QUALITY
         task.input = image_bytes
-        task.memory_requirement_mb 
+        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)

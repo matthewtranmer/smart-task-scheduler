@@ -10,11 +10,12 @@ def main(address):
                 image_bytes = f.read()
 
         while True:
-            deadline = 1000
+            deadline = random.randint(400, 3000)
             
             start_time = time.perf_counter()
 
             task_id = random.randint(0, 2)
+
             # task_id = 7
             match task_id:
                 case 0:

@@ -38,7 +38,7 @@ def send(sock, header: edge_pb2.Header, data: bytes):
     
     sock.sendall(header_length + header_bytes + data)
 
-def recv(sock): 
+def recv(sock) -> tuple[edge_pb2.Header, bytes]: 
     header_length_bytes = sock.recv(4)
     header_length = int.from_bytes(header_length_bytes, byteorder="little", signed=False)
 
