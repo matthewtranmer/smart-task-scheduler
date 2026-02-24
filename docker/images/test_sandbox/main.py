@@ -1,6 +1,10 @@
+print("First line")
+
 import sys, json, traceback
 from src import task
 from lib import edge_pb2
+
+print("Finished imports")
 
 def read_data() -> bytes:
     length_bytes = sys.stdin.buffer.read(4)
@@ -17,14 +21,26 @@ def write_data(data: bytes):
     sys.stdout.buffer.flush()
 
 def main():
-
-    with open("src/user/test_data/human.jpg", "rb") as f:
+    print("running!")
+    with open("/app/orange.png", "rb") as f:
         image_bytes = f.read()
 
-    input_id = 2
-    result = task.run_task(input_id, image_bytes)
+    FRUIT_SIZE = 9
+    # FRUIT_DEFECTS = 10
 
+    result = task.run_task(FRUIT_SIZE, image_bytes)
     print(result)
+
+
+
+
+    # with open("src/user/test_data/human.jpg", "rb") as f:
+    #     image_bytes = f.read()
+
+    # input_id = 2
+    # result = task.run_task(input_id, image_bytes)
+
+    # print(result)
 
     # response = edge_pb2.ContainerResponse()
     # response.inputID = input_id

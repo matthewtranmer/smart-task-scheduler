@@ -1,3 +1,7 @@
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # 0=all, 1=INFO, 2=WARNING, 3=ERROR
+
+
 import io
 import numpy as np
 from PIL import Image
@@ -55,7 +59,7 @@ def main(image_bytes: bytes) -> bytes:
 
     with suppress_stderr_fd():
         # Create and allocate the interpreter once, at import time
-        interpreter = tflite.Interpreter(model_path=TFLITE_MODEL_PATH)
+        interpreter = tflite.Interpreter(model_path=TFLITE_MODEL_PATH, num_threads=1)
         # interpreter = TFLiteInterpreter(model_path=TFLITE_MODEL_PATH)  # if using TF instead
         interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()

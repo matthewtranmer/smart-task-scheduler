@@ -10,6 +10,7 @@ class EdgeClient:
             logger: logging.Logger, 
             access_server_address: tuple, 
             cpus: int = None,
+            clock_speed_cps: int = None,
             memory_mb: int = None,
             ip=None, 
             port=0
@@ -21,6 +22,11 @@ class EdgeClient:
             self.cpus = cpus
         else:
             self.cpus = len(system.getPhysicalCpuIds())
+
+        if clock_speed_cps != None:
+            self.clock_speed_cps = clock_speed_cps
+        else:
+            self.clock_speed_cps = system.getClockSpeedCPS()
 
         if memory_mb != None:
             self.memory_mb = memory_mb
@@ -97,6 +103,7 @@ class EdgeClient:
         registration.port = self.port
         registration.cpus = self.cpus
         registration.memory_mb = self.memory_mb
+        registration.clock_speed_cps = self.clock_speed_cps
 
         registration_bytes = registration.SerializeToString()
 

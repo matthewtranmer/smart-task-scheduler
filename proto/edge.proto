@@ -12,6 +12,7 @@ message Task {
     int32 memory_requirement_mb = 3;
     int32 deadline_ms = 4;
     int32 inputID = 5;
+    int64 cycles_required = 6;
 }
 
 message Registration {
@@ -19,6 +20,7 @@ message Registration {
     uint32 port = 2;
     int32 cpus = 3;
     int32 memory_mb = 4;
+    int64 clock_speed_cps = 5;
 }
 
 message Heartbeat {

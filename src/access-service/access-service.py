@@ -52,7 +52,7 @@ class EdgeAccess:
             scheduler: s.Scheduler, 
             queue_wait_time_s: int, 
             priority_task_threshold_s: int,
-            logger, 
+            logger: logging.Logger, 
             diagnostics, 
             ip=None, 
             port=2004
@@ -104,6 +104,7 @@ class EdgeAccess:
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
+    # Method that takes the task request from the client and queues it
     def handle_task(self, incoming_request, client_socket):
         _, raw_payload = incoming_request
 
@@ -116,20 +117,8 @@ class EdgeAccess:
         if (task.deadline_ms / 1000 > self.priority_task_threshold_s):
             self.task_queue.add_task(TaskInformation(task, client_socket))
         else:
-            print("PRIORITY TASK! Fast tracking scheduling ********************************************************************")
+            self.logger.info("Priority task detected, fast tracking scheduling...")
             threading.Thread(target=self.execute_task, args=(task, client_socket)).start()
-
-
-    def execute_task(self, task: edge_pb2.Task, client_socket: socket.socket):
-        # Send the task to a node
-        try:
-            response = self.send_to_node(task)
-        except s.NoNodesExeception as e:
-            response = net.createResponse(False, e.message.encode()).SerializeToString()
-
-        # Return the response to the remote client
-        header = net.createHeader(net.Commands.SCHEDULE_TASK)
-        net.send(client_socket, header, response)
 
 
     # Called every queue_wait_time_s seconds
@@ -138,18 +127,38 @@ class EdgeAccess:
         queue: list[TaskInformation] = self.task_queue.flush_queue()
 
         for task in queue:
-            self.logger.info(f"Executing task with ID {task.task.taskID} and deadline {task.task.deadline_ms}")
             threading.Thread(target=self.execute_task, args=(task.task, task.client_socket)).start()
 
         # Recall function after delay
         threading.Timer(self.queue_wait_time_s, self.run_tasks).start()
 
+    # Executed in separate threads
+    def execute_task(self, task: edge_pb2.Task, client_socket: socket.socket):
+        self.logger.info(f"Executing task with ID {task.taskID} and deadline {task.deadline_ms}")
+
+        # Send the task to a node
+        try:
+            response = self.send_to_node(task)
+        except s.NoNodesExeception as e:
+            response = net.createResponse(False, e.message.encode(), response_code=500).SerializeToString()
+        except s.TaskDroppedExeception as e:
+            response = net.createResponse(False, e.message.encode(), response_code=551).SerializeToString()
+
+        # Return the response to the remote client
+        header = net.createHeader(net.Commands.SCHEDULE_TASK)
+        net.send(client_socket, header, response)
+
+
     def send_to_node(self, task, edge_timeout=5) -> bytes:
         # Attempt to make a connection to a node at most 3 times
         for _ in range(3):
             # Schedule either an edge or cloud node.
-            scheduled_node: s.ScheduledNode = self.scheduler.schedule(task.memory_requirement_mb)
-        
+            scheduled_node: s.ScheduledNode = self.scheduler.schedule(
+                task.deadline_ms / 1000,
+                task.cycles_required,
+                task.memory_requirement_mb
+            )
+            
             # Try to connect to remote node
             try:
                 remote_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -253,7 +262,7 @@ class EdgeAccess:
         ip = socket.inet_ntop(socket.AF_INET, registration.IP)
         port = registration.port
 
-        added_node = self.scheduler.addNode((ip, port), registration.cpus, registration.memory_mb)
+        added_node = self.scheduler.addNode((ip, port), registration.cpus, registration.clock_speed_cps, registration.memory_mb)
         if not added_node:
             return net.createResponse(False, b"Client already exists in the registry!")
 
@@ -295,6 +304,7 @@ def main():
         level=logging.DEBUG,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    logger = logging.getLogger(__name__)
 
     # cloud_ip = "LB1-6c7327e45f7a7b95.elb.eu-north-1.amazonaws.com"
     # cloud_ip = socket.gethostbyname(cloud_ip)
@@ -302,8 +312,14 @@ def main():
     # cloud_address = (cloud_ip, cloud_port)
     cloud_address = ("127.0.0.1", 16225)
     
-    scheduler = s.SchedulerV1(cloud_address, omega=0.01)
-    logger = logging.getLogger(__name__)
+    scheduler = s.SchedulerV1(
+        logger=logger,
+        cloud_address=cloud_address,
+        cloud_clock_speed_cps=3.4*10**9, #3.4Ghz
+        cloud_RTT_latency_s=0.7,
+        load_factor_usage_threshold=0.35, 
+        omega=0.01
+    )
     
     diagnostics = Diagnostics(
         measurement_interval_s=5,

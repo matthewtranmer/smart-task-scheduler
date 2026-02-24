@@ -51,3 +51,7 @@ def getPhysicalCpuIds():
 # Returns the amount of system memory in MiB
 def getSystemMemoryMB():
     return psutil.virtual_memory().total // 1024 // 1024
+
+def getClockSpeedCPS():
+    # Convert from MHz to Hz
+    return int(psutil.cpu_freq().max) * 1000**2

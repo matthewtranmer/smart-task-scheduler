@@ -6,12 +6,22 @@ def main(address):
     try:
         offloader = taskoffloader.TaskOffloader(address)
 
+        with open("src/user/test_data/unripe_banana.jpeg", "rb") as f:
+            image_bytes = f.read()
+
+        response = offloader._test_banana_ripeness(image_bytes, 2000)
+        print(f"Got response: {response}")
+
+        return
+
         with open("src/user/test_data/human.jpg", "rb") as f:
                 image_bytes = f.read()
 
         while True:
-            deadline = random.randint(400, 3000)
-            
+            deadline = random.randint(200, 3000)
+            print(f"deadline: {deadline}")
+        #     deadline = 1
+
             start_time = time.perf_counter()
 
             task_id = random.randint(0, 2)
@@ -70,7 +80,11 @@ def main(address):
             print(f"Response {response}")
 
             if (not response.success):
-                time.sleep(5)
+                # Task dropped
+                if (response.code == 551):
+                    for i in range(30):
+                        print("TASK DROPPED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    time.sleep(5)
 
     except Exception as e:
         print("CLIENT SIDE EXECEPTION")

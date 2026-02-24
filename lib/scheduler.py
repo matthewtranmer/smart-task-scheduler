@@ -1,4 +1,5 @@
 from multiprocessing import Lock
+import logging
 
 class NoNodesExeception(Exception):
     def __init__(self, message):
@@ -16,7 +17,16 @@ class NodeResourceExecpetion(Exception):
     def __str__(self):
         return f"{self.message}"
     
+class TaskDroppedExeception(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return f"{self.message}"
+    
 class Tasks():
+    # *** Non-parallel tasks ***
     DETECT_HUMAN = 0
     CLASSIFY_FRUIT = 1
     FRUIT_QUALITY = 2
@@ -24,9 +34,15 @@ class Tasks():
     DECOMPRESSION = 4
     ENCRYPTION = 5
     DECRYPTION = 6
-    ADDITION = 100
-    MULTIPLICATION = 101
-    DIVISION = 102
+    BANANA_QUALITY_RIPENESS = 7
+    ORANGE_QUALITY_RIPENESS = 8
+    FRUIT_SIZE = 9
+    FRUIT_DEFECTS = 10
+
+    # Test tasks
+    ADDITION = 10001
+    MULTIPLICATION = 10002
+    DIVISION = 10003
 
     @staticmethod
     def getName(task_id):
@@ -60,6 +76,25 @@ class Scheduler:
     def schedule(self) -> ScheduledNode:
         raise NotImplementedError
     
+    # Calculates the mean clock speed between the edge nodes
+    def calculate_average_clock_speed(self) -> int:
+        total = 0
+        count = 0
+
+        for node in self.nodes:
+            total += node["clock_speed"]
+            count += 1
+
+        return int(total / count)
+    
+    def calculate_processing_time(self, clock_speed, cycles_required):
+        return cycles_required / clock_speed
+    
+    def calculate_cloud_processing_time(self, cycles_required):
+        processing_time = self.calculate_processing_time(self.cloud_clock_speed_cps, cycles_required)
+        
+        return processing_time + self.cloud_RTT_latency_s
+    
     def calculateResourceUsage(self, sample_time_s) -> list:
         for node in self.nodes:
             cpu_time_per_second = node["cpu_time_ms"] // sample_time_s
@@ -89,10 +124,11 @@ class Scheduler:
 
     # Returns true if node is added to the registry, false if the node
     # already exists in the registry
-    def addNode(self, address, cpus, memory_mb) -> bool:
+    def addNode(self, address, cpus, clock_speed, memory_mb) -> bool:
         node = {
             "address": address,
             "cpus": cpus,
+            "clock_speed": clock_speed,
             "memory": memory_mb,
             "cpus_available": cpus,
             "memory_available": memory_mb,
@@ -164,21 +200,6 @@ class Scheduler:
     def getNodeID(self, address):
         index = self._findNodeIndex(address)
         return self.nodes[index]["id"]
-
-# class RoundRobin(Scheduler):
-#     def schedule(self) -> tuple[str, int]:
-#         if len(self.nodes) <= 0:
-#             return None
-
-#         if self.index >= len(self.nodes):
-#             self.index = 0
-
-#         scheduled_node = self.nodes[self.index]["address"]
-#         self.index += 1
-
-#         return scheduled_node
-
-
     
 class RoundRobinWithAllocation(Scheduler):
     def schedule(self, memory_mb) -> ScheduledNode:
@@ -256,55 +277,102 @@ class SchedulerV1(Scheduler):
 
     # High omega - score nodes with more free memory higher
     # Low omega - score nodes with more free CPUs higher
-    def __init__(self, cloud_address, omega=0.8):
-        self.cloud_address = cloud_address
-        self.omega = omega
+    def __init__(
+            self, 
+            logger: logging.Logger,
+            cloud_address: tuple[str, int], # The address where cloud tasks are scheduled to
+            cloud_clock_speed_cps: int, # Cloud clock speed in cycles per second
+            cloud_RTT_latency_s: float, # The network delay when sending a task to the cloud 
+            load_factor_usage_threshold: float, # Threshold when tasks are preemptively scheduled to the cloud 
+            omega: float # Resource priority when calculating each node's score  
+        ):
+        self.logger: logging.Logger = logger
+        self.cloud_address: tuple[str, int] = cloud_address
+        self.cloud_clock_speed_cps: int = cloud_clock_speed_cps
+        self.cloud_RTT_latency_s: float = cloud_RTT_latency_s
+        self.load_factor_usage_threshold: float = load_factor_usage_threshold
+        self.omega: float = omega
 
-    def schedule(self, task_memory_mb) -> ScheduledNode:
-        # pprint.pprint(self.nodes)
+    def _get_best_node(self, task_deadline_s, task_cycles_required, task_memory_mb) -> tuple[dict, int]:
+        best_node = None
+        top_score = 0
+        # count = 0
 
+        # Find the node with the best score
+        for node in self.nodes:
+            node_score = self._score_node(
+                node, 
+                task_deadline_s, 
+                task_cycles_required, 
+                task_memory_mb
+            )
+
+            # self.logger.debug(f"Node {count} got score {node_score}")
+            # self.logger.debug(f"Node {count} CPUs available {node["cpus_available"]}")
+            
+
+            # count += 1
+
+            if (node_score > top_score):
+                top_score = node_score
+                best_node = node
+
+        return (best_node, top_score)
+
+    def schedule(self, task_deadline_s, task_cycles_required, task_memory_mb) -> ScheduledNode:
         with self.lock:
-            best_node = None
-            top_score = 0
 
-            print("scores: ", end="")
-            # Find the node with the best score
-            for node in self.nodes:
-                node_score = self._score_node(node, task_memory_mb)
+            load_factor = self._calculate_load_factor()
+            print(f"load_factor: {load_factor}")
+            if load_factor > self.load_factor_usage_threshold:
+                self.logger.debug(f"Load factor above threshold")
 
-                print(f"score:{node_score}, ", end="")
+                # Calculate if task can be sent to the cloud without exceeding deadline
+                cloud_execution_time = self.calculate_cloud_processing_time(task_cycles_required)
 
-                if (node_score > top_score):
-                    top_score = node_score
-                    best_node = node
+
+                # print(f"cloud_execution_time: {cloud_execution_time}")
+                # print(f"task_deadline_s: {task_deadline_s}")
+
+                if cloud_execution_time < task_deadline_s:
+                    self.logger.info("High load factor mitigation - sending long deadline task to cloud")
+                    return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
+
+            # Calculate best edge node using scoring system
+            best_node, top_score = self._get_best_node(
+                task_deadline_s,
+                task_cycles_required,
+                task_memory_mb
+            )
+
+            # print(top_score)
 
             # No edge nodes available to process task
             if (top_score == 0):
-                print("GOT SCORE OF 0 - SENDING TO CLOUD")
-                return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
+                self.logger.info("No free edge nodes available to process task")
 
-            print("DIDN'T GET SCORE OF ZEROR - SENDING TO EDGE")
-            print(f"Best node had {best_node["cpus_available"]} CPUs available before scheduling")
-            print(f"Best node had {best_node["memory_available"]}mb available before scheduling")
+                # Test if task is viable to run on the cloud
+                cloud_execution_time = self.calculate_cloud_processing_time(task_cycles_required)
+                if cloud_execution_time < task_deadline_s:
+                    return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
+
+                # Task won't be able to be completed in time - drop
+                self.logger.info("Task dropped!!")
+                raise TaskDroppedExeception("Task will not be able to be executed before the given deadline!")
 
             best_node["cpus_available"] -= 1
             best_node["memory_available"] -= task_memory_mb
             best_node["assigned_tasks"] += 1
 
-            print(f"Best node now has {best_node["cpus_available"]} CPUs available after scheduling")
-            print(f"NEW memory availible: {best_node["memory_available"]}")
-
             if (best_node["cpus_available"] < 0):
-                print("GONE NEGATIVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+                self.logger.error("CPUs available stat has gone negative")
 
             # Schedule to edge node with highest score
             return ScheduledNode(best_node["address"], NodeType.EDGE, task_memory_mb)
 
-    def _score_node(self, node, task_memory_mb) -> int:
+    def _score_node(self, node, task_deadline_s, task_cycles_required, task_memory_mb) -> int:
         memory_available: int = node["memory_available"]
         cpus_available: int = node["cpus_available"]
-
-        print(f"_score_node(): cpus available = {cpus_available}")
 
         memory_total: int = node["memory"]
         cpus_total: int = node["cpus"]
@@ -316,6 +384,11 @@ class SchedulerV1(Scheduler):
         # Return a score of 0 if there isn't a free CPU on the node to perform the task
         if (cpus_available < 1):
             return 0
+                
+        # If task won't complete on edge node in time, return score of 0
+        processing_time = self.calculate_processing_time(node["clock_speed"], task_cycles_required)
+        if (processing_time > task_deadline_s):
+            return 0
         
         # Calculate resource used if task were to be scheduled
         new_memory_usage: int = (memory_available - task_memory_mb) / memory_total   
@@ -324,25 +397,23 @@ class SchedulerV1(Scheduler):
         # Score the node
         score: int = (self.omega * new_memory_usage) +  (1 - self.omega) * new_CPU_usage
         return score
+    
+    # The higher the load factor - the higher the resource usage 
+    def _calculate_load_factor(self):
+        cpus_used = 0
+        cpus_total = 0
         
+        for node in self.nodes:
+            node_total_cpus = node["cpus"]
+            node_used_cpus = node_total_cpus - node["cpus_available"] 
+
+            cpus_used += node_used_cpus
+            cpus_total += node_total_cpus
+
+        # If there are no CPUs - same as if all CPUs are taken
+        if cpus_total == 0:
+            return 1
+
+        return cpus_used / cpus_total
+            
         
-        
-
-
-
-# class Scheduler:
-#     # current_node = 0
-
-#     # # Returns the index of the next node to be scheduled in the edge clients list.
-#     # # Returns -1 if there are no available nodes
-#     # def schedule(self, edge_clients): 
-#     #     if len(edge_clients) == 0:
-#     #         return -1
-
-#     #     if self.current_node >= len(edge_clients):
-#     #         self.current_node = 0
-        
-#     #     node_index = self.current_node
-#     #     self.current_node += 1
-
-#     #     return node_index

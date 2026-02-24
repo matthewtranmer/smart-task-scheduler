@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10proto/edge.proto\x12\x04\x65\x64ge\"2\n\x06Header\x12\x15\n\rmessageLength\x18\x01 \x01(\x05\x12\x11\n\tcommandID\x18\x02 \x01(\x05\"j\n\x04Task\x12\x0e\n\x06taskID\x18\x01 \x01(\x05\x12\r\n\x05input\x18\x02 \x01(\x0c\x12\x1d\n\x15memory_requirement_mb\x18\x03 \x01(\x05\x12\x13\n\x0b\x64\x65\x61\x64line_ms\x18\x04 \x01(\x05\x12\x0f\n\x07inputID\x18\x05 \x01(\x05\"I\n\x0cRegistration\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\x12\x0c\n\x04\x63pus\x18\x03 \x01(\x05\x12\x11\n\tmemory_mb\x18\x04 \x01(\x05\"%\n\tHeartbeat\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\"8\n\x08Response\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0c\n\x04\x63ode\x18\x02 \x01(\x05\x12\r\n\x05value\x18\x03 \x01(\x0c\"q\n\x11\x43ontainerResponse\x12\r\n\x05value\x18\x01 \x01(\x0c\x12\x0f\n\x07inputID\x18\x02 \x01(\x05\x12\x1a\n\x12processing_time_ms\x18\x03 \x01(\x05\x12\r\n\x05\x65rror\x18\x04 \x01(\x08\x12\x11\n\ttraceback\x18\x05 \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10proto/edge.proto\x12\x04\x65\x64ge\"2\n\x06Header\x12\x15\n\rmessageLength\x18\x01 \x01(\x05\x12\x11\n\tcommandID\x18\x02 \x01(\x05\"\x83\x01\n\x04Task\x12\x0e\n\x06taskID\x18\x01 \x01(\x05\x12\r\n\x05input\x18\x02 \x01(\x0c\x12\x1d\n\x15memory_requirement_mb\x18\x03 \x01(\x05\x12\x13\n\x0b\x64\x65\x61\x64line_ms\x18\x04 \x01(\x05\x12\x0f\n\x07inputID\x18\x05 \x01(\x05\x12\x17\n\x0f\x63ycles_required\x18\x06 \x01(\x03\"b\n\x0cRegistration\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\x12\x0c\n\x04\x63pus\x18\x03 \x01(\x05\x12\x11\n\tmemory_mb\x18\x04 \x01(\x05\x12\x17\n\x0f\x63lock_speed_cps\x18\x05 \x01(\x03\"%\n\tHeartbeat\x12\n\n\x02IP\x18\x01 \x01(\x0c\x12\x0c\n\x04port\x18\x02 \x01(\r\"8\n\x08Response\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0c\n\x04\x63ode\x18\x02 \x01(\x05\x12\r\n\x05value\x18\x03 \x01(\x0c\"q\n\x11\x43ontainerResponse\x12\r\n\x05value\x18\x01 \x01(\x0c\x12\x0f\n\x07inputID\x18\x02 \x01(\x05\x12\x1a\n\x12processing_time_ms\x18\x03 \x01(\x05\x12\r\n\x05\x65rror\x18\x04 \x01(\x08\x12\x11\n\ttraceback\x18\x05 \x01(\tb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'proto.edge_pb2', globals())
@@ -22,14 +22,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _HEADER._serialized_start=26
   _HEADER._serialized_end=76
-  _TASK._serialized_start=78
-  _TASK._serialized_end=184
-  _REGISTRATION._serialized_start=186
-  _REGISTRATION._serialized_end=259
-  _HEARTBEAT._serialized_start=261
-  _HEARTBEAT._serialized_end=298
-  _RESPONSE._serialized_start=300
-  _RESPONSE._serialized_end=356
-  _CONTAINERRESPONSE._serialized_start=358
-  _CONTAINERRESPONSE._serialized_end=471
+  _TASK._serialized_start=79
+  _TASK._serialized_end=210
+  _REGISTRATION._serialized_start=212
+  _REGISTRATION._serialized_end=310
+  _HEARTBEAT._serialized_start=312
+  _HEARTBEAT._serialized_end=349
+  _RESPONSE._serialized_start=351
+  _RESPONSE._serialized_end=407
+  _CONTAINERRESPONSE._serialized_start=409
+  _CONTAINERRESPONSE._serialized_end=522
 # @@protoc_insertion_point(module_scope)

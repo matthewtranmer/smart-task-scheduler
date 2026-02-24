@@ -7,6 +7,12 @@ from src.tasks.fruit_quality.fruit_quality import fruitQuality
 from src.tasks.compression.compression import compress, decompress
 from src.tasks.encryption.encryption import encrypt, decrypt
 
+from src.tasks.banana_ripeness.ripeness import ripeness as banana_ripeness
+from src.tasks.orange_ripeness.ripeness import ripeness as orange_ripeness
+
+# from src.tasks.fruit_defects.fruit_defects import fruit_defects 
+from src.tasks.fruit_size.fruit_size import fruit_size
+
 # Test tasks
 from src.tasks.addition.addition import addition
 from src.tasks.multiplication.multiplication import multiplication
@@ -40,6 +46,16 @@ def run_task(taskID: int, data: bytes) -> bytes:
             result = encrypt(data)
         case Tasks.DECRYPTION:
             result = decrypt(data)
+        
+        case Tasks.BANANA_QUALITY_RIPENESS:
+            result = banana_ripeness(data)
+        case Tasks.ORANGE_QUALITY_RIPENESS:
+            result = orange_ripeness(data)
+
+        case Tasks.FRUIT_DEFECTS:
+            result = fruit_defects(data)
+        case Tasks.FRUIT_SIZE:
+            result = fruit_size(data)
 
         # Test tasks
         case Tasks.ADDITION:
