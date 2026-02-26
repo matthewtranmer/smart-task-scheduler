@@ -44,7 +44,7 @@ class EdgeClient:
         _, self.port = self.server.getsockname()
         self.server.listen()
 
-        logger.info(f"Edge client started on address {self.ip}:{self.port} with {self.cpus} cpus and {self.memory_mb}MB of memory")
+        logger.info(f"Edge client started on address {self.ip}:{self.port} with {self.cpus} cpus at {self.clock_speed_cps / 1000**2}MHz and {self.memory_mb}MB of memory")
 
     def serve(self, container_image, timeout=5):
         self.registerNode()
@@ -196,6 +196,7 @@ def main(address):
         logger=logger,
         access_server_address=access_server_address,
         cpus=4,
+        clock_speed_cps=4*10**9,
         memory_mb=8000
     )
 

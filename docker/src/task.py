@@ -13,6 +13,8 @@ from src.tasks.orange_ripeness.ripeness import ripeness as orange_ripeness
 from src.tasks.fruit_defects.fruit_defects import fruit_defects 
 from src.tasks.fruit_size.fruit_size import fruit_size
 
+from src.tasks.object_count.object_count import object_count
+
 # Test tasks
 from src.tasks.addition.addition import addition
 from src.tasks.multiplication.multiplication import multiplication
@@ -56,6 +58,9 @@ def run_task(taskID: int, data: bytes) -> bytes:
             result = fruit_defects(data)
         case Tasks.FRUIT_SIZE:
             result = fruit_size(data)
+        
+        case Tasks.OBJECT_COUNT:
+            result = object_count(data)
 
         # Test tasks
         case Tasks.ADDITION:

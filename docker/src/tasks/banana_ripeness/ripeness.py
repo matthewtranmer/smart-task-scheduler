@@ -71,7 +71,7 @@ def main(img_bytes: bytes) -> str:
 
     return getBananaRipeness_tflite(
         img_bytes,
-        model_path="/app/src/tasks/banana_quality/ripeness/banana_ripeness_resnet18_float32.tflite",
+        model_path="/app/src/tasks/banana_ripeness/banana_ripeness_resnet18_float32.tflite",
         idx_to_class=idx_to_class
     )
 

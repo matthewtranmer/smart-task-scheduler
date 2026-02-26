@@ -31,7 +31,7 @@ def main():
     FRUIT_SIZE = 9
     FRUIT_DEFECTS = 10
 
-    current_task = FRUIT_SIZE
+    current_task = 11
 
     print("Running....")
 

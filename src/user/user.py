@@ -9,12 +9,12 @@ def main(address):
         with open("src/user/test_data/ballon.png", "rb") as f:
             image_bytes = f.read()
 
-        response = offloader.fruit_defects(image_bytes, 2000)
+        response = offloader.object_count(image_bytes, 2000)
         print(f"Got response: {response}")
 
         return
 
-        with open("src/user/test_data/human.jpg", "rb") as f:
+        with open("src/user/test_data/ballon.png", "rb") as f:
                 image_bytes = f.read()
 
         while True:
@@ -24,48 +24,72 @@ def main(address):
 
             start_time = time.perf_counter()
 
-            task_id = random.randint(0, 2)
+            tasks = [
+                Tasks.BANANA_QUALITY_RIPENESS,
+                Tasks.ORANGE_QUALITY_RIPENESS,
+                Tasks.DETECT_HUMAN,
+                Tasks.FRUIT_DEFECTS,
+                Tasks.FRUIT_SIZE,
+                Tasks.CLASSIFY_FRUIT,  
+                Tasks.OBJECT_COUNT,          
+            ]
+
+            task_id = random.choice(tasks)
 
             # task_id = 7
             match task_id:
-                case 0:
+                case Tasks.DETECT_HUMAN:
                         print("DETECT HUMAN")
                         response = offloader.detectHuman(image_bytes, deadline)
-                case 1:
+                case Tasks.CLASSIFY_FRUIT:
                         print("CLASSIFY FRUIT")
                         response = offloader.classifyFruit(image_bytes, deadline)
-                case 2:
+                case Tasks.FRUIT_QUALITY:
                         print("FRUIT QUALITY")
                         response = offloader.fruitQuality(image_bytes, deadline)
-                case 3:
+                case Tasks.COMPRESSION:
                         print("COMPRESSION")
                         data = "This is some data that needs to be compressed. " * 20
                         response = offloader.compress(data, deadline)
-                case 4:
+                case Tasks.DECOMPRESSION:
                         print("DECOMPRESSION")
                         data = "This is some data that needs to be compressed. " * 20
                         response = offloader.decompress(data, deadline)
-                case 5:
+                case Tasks.ENCRYPTION:
                         print("ENCRYPTION")
                         response = offloader.encrypt("keykeykeykeykey1", "This is some plaintext data to be encrypted.", deadline)
-                case 6:
+                case Tasks.DECRYPTION:
                         print("DECRYPTION")
                         response = offloader.decrypt("keykeykeykeykey1", "U2FsdGVkX1+I3V6Y5G6u1g6X9s6jZ0bX5Zl5r8QvV3I=", deadline)
-                case 7:
+                case Tasks.ORANGE_QUALITY_RIPENESS:
+                        print("ORANGE_QUALITY_RIPENESS")
+                        response = offloader._test_orange_ripeness(image_bytes, deadline)
+                case Tasks.BANANA_QUALITY_RIPENESS:
+                        print("BANANA_QUALITY_RIPENESS")
+                        response = offloader._test_banana_ripeness(image_bytes, deadline)
+
+                case Tasks.FRUIT_DEFECTS:
+                        print("FRUIT_DEFECTS")
+                        response = offloader.fruit_defects(image_bytes, deadline)
+                case Tasks.FRUIT_SIZE:
+                        print("FRUIT_SIZE")
+                        response = offloader.fruit_size(image_bytes, deadline)
+
+                case Tasks.ADDITION:
                         print("ADDITION")
 
                         a = random.randint(1, 99)
                         b = random.randint(1, 99)
 
                         response = offloader.addition(a, b, deadline)
-                case 8:
+                case Tasks.MULTIPLICATION:
                         print("MULTIPLICATION")
 
                         a = random.randint(1, 99)
                         b = random.randint(1, 99)
 
                         response = offloader.multiplication(a, b, deadline)
-                case 9:
+                case Tasks.DIVISION:
                         print("DIVISION")
 
                         a = random.randint(1, 99)

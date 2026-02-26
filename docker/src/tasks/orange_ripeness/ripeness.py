@@ -72,7 +72,7 @@ def main(img_bytes: bytes) -> str:
 
     return getOrangeRipeness_tflite(
         img_bytes,
-        model_path="/app/src/tasks/orange_quality/ripeness/orange_ripeness_resnet18_float32.tflite",
+        model_path="/app/src/tasks/orange_ripeness/orange_ripeness_resnet18_float32.tflite",
         idx_to_class=idx_to_class
     )
 

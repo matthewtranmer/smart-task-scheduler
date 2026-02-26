@@ -2,6 +2,7 @@ import io
 import json
 import numpy as np
 from PIL import Image
+from tflite_runtime.interpreter import Interpreter
 import multiprocessing as mp
 import os, sys
 from contextlib import contextmanager

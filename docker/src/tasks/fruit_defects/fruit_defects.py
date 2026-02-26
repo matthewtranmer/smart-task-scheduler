@@ -29,8 +29,7 @@ def suppress_stderr_fd():
 
 def remove_bg(image_bytes: bytes) -> Image:
     # Lazy load
-    with suppress_stderr_fd():
-        import onnxruntime as ort
+    import onnxruntime as ort
 
     session = ort.InferenceSession("/app/src/shared_task_data/u2netp.onnx")
     input_name = session.get_inputs()[0].name
@@ -99,7 +98,9 @@ def get_adjacent_pixels(x, y, width, height):
 
 
 def calculate_fruit_defects(img_bytes: bytes):
-    output_image: Image = remove_bg(img_bytes)
+    with suppress_stderr_fd():
+        output_image: Image = remove_bg(img_bytes)
+
     output_image: Image = output_image.convert("RGBA").copy()
 
     pixels = output_image.load()

@@ -38,6 +38,7 @@ class Tasks():
     ORANGE_QUALITY_RIPENESS = 8
     FRUIT_SIZE = 9
     FRUIT_DEFECTS = 10
+    OBJECT_COUNT = 11
 
     # Test tasks
     ADDITION = 10001
@@ -392,8 +393,8 @@ class SchedulerV1(Scheduler):
                 
         # If task won't complete on edge node in time, return score of 0
         processing_time = self.calculate_processing_time(node["clock_speed"], task_cycles_required)
-        print(f"processing_time: {processing_time}")
-        print(f"node['clock_speed']: {node["clock_speed"]}")
+        # print(f"processing_time: {processing_time}")
+        # print(f"node['clock_speed']: {node["clock_speed"]}")
         if (processing_time > task_deadline_s):
             self.logger.debug("Task won't execute on edge node before deadline")
 
