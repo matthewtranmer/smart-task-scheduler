@@ -1,6 +1,6 @@
-from rembg import remove, new_session
 from PIL import Image
 import io
+import multiprocessing as mp
 
 # Returns the coordinates of a maximum of 5x5 adjacent pixels
 def get_adjacent_pixels(x, y, width, height):
@@ -33,7 +33,10 @@ def get_adjacent_pixels(x, y, width, height):
     return pixels
 
 
-def fruit_defects(img_bytes: bytes):
+def calculate_fruit_defects(img_bytes: bytes):
+    # Lazy load
+    from rembg import new_session, remove
+
     input_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
     session = new_session("u2netp")
@@ -82,3 +85,7 @@ def fruit_defects(img_bytes: bytes):
     black_pixel_ratio = black_pixels/foreground_pixels
 
     return str(black_pixel_ratio).encode()
+
+def fruit_defects(img_bytes: bytes):
+    with mp.Pool(1) as pool:
+        return pool.apply(calculate_fruit_defects, args=(img_bytes,))

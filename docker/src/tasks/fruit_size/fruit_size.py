@@ -1,11 +1,10 @@
-print("FRUIT SIZE 1")
-from rembg import remove, new_session
-print("FRUIT SIZE 2")
-
 from PIL import Image
 import io
+import multiprocessing as mp
 
-def fruit_size(img_bytes: bytes):
+def calculate_fruit_size(img_bytes: bytes):
+    from rembg import new_session, remove
+
     input_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
     session = new_session("u2netp")
@@ -25,3 +24,7 @@ def fruit_size(img_bytes: bytes):
     # Higer the ratio, the higher the foreground covers the screen
     foreground_background_ratio = foreground_pixels / background_pixels
     return str(foreground_background_ratio).encode()
+
+def fruit_size(img_bytes: bytes):
+    with mp.Pool(1) as pool:
+        return pool.apply(calculate_fruit_size, args=(img_bytes,))

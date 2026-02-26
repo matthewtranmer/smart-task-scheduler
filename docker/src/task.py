@@ -10,7 +10,7 @@ from src.tasks.encryption.encryption import encrypt, decrypt
 from src.tasks.banana_ripeness.ripeness import ripeness as banana_ripeness
 from src.tasks.orange_ripeness.ripeness import ripeness as orange_ripeness
 
-# from src.tasks.fruit_defects.fruit_defects import fruit_defects 
+from src.tasks.fruit_defects.fruit_defects import fruit_defects 
 from src.tasks.fruit_size.fruit_size import fruit_size
 
 # Test tasks

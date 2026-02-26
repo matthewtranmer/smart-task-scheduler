@@ -31,4 +31,18 @@ COPY docker/src/ /app/src/
 COPY lib/edge_pb2.py /app/lib/edge_pb2.py
 COPY lib/scheduler.py /app/lib/scheduler.py
 
+RUN python -m compileall -q /usr/local/lib/python*/site-packages
+# RUN python -c "from rembg import new_session; new_session('u2netp')"
+
+RUN python - <<'PY'
+import multiprocessing as mp
+
+def main():
+    from rembg import new_session
+    new_session('u2netp')
+
+with mp.Pool(1) as pool:
+    pool.apply(main)
+PY
+
 ENTRYPOINT [ "python3", "-u", "main.py" ]

@@ -1,8 +1,11 @@
 print("First line")
 
-import sys, json, traceback
+# while (True): pass
+
+import sys, json, traceback, time
 from src import task
 from lib import edge_pb2
+
 
 print("Finished imports")
 
@@ -21,15 +24,22 @@ def write_data(data: bytes):
     sys.stdout.buffer.flush()
 
 def main():
-    print("running!")
+    print("Started!")
     with open("/app/orange.png", "rb") as f:
         image_bytes = f.read()
 
     FRUIT_SIZE = 9
-    # FRUIT_DEFECTS = 10
+    FRUIT_DEFECTS = 10
 
-    result = task.run_task(FRUIT_SIZE, image_bytes)
+    time.sleep(5)
+
+    print("Running....")
+
+    result = task.run_task(FRUIT_DEFECTS, image_bytes)
     print(result)
+
+    while (True):
+        pass
 
 
 
