@@ -6,10 +6,10 @@ def main(address):
     try:
         offloader = taskoffloader.TaskOffloader(address)
 
-        with open("src/user/test_data/unripe_banana.jpeg", "rb") as f:
+        with open("src/user/test_data/ballon.png", "rb") as f:
             image_bytes = f.read()
 
-        response = offloader._test_banana_ripeness(image_bytes, 2000)
+        response = offloader.fruit_defects(image_bytes, 2000)
         print(f"Got response: {response}")
 
         return

@@ -31,11 +31,19 @@ def main():
     FRUIT_SIZE = 9
     FRUIT_DEFECTS = 10
 
+    current_task = FRUIT_SIZE
+
+    print("Running....")
+
+    result = task.run_task(current_task, image_bytes)
+    print(result)
+
+    print("Waiting....")
     time.sleep(5)
 
     print("Running....")
 
-    result = task.run_task(FRUIT_DEFECTS, image_bytes)
+    result = task.run_task(current_task, image_bytes)
     print(result)
 
     while (True):

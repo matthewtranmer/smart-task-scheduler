@@ -349,6 +349,7 @@ class SchedulerV1(Scheduler):
 
             # No edge nodes available to process task
             if (top_score == 0):
+                print(f"Nodes detected {len(self.nodes)}")
                 self.logger.info("No free edge nodes available to process task")
 
                 # Test if task is viable to run on the cloud
@@ -379,15 +380,23 @@ class SchedulerV1(Scheduler):
 
         # Return score of 0 if there isn't enough memory on the node to perform the task
         if (memory_available < task_memory_mb):
+            self.logger.debug("Edge node doesn't have enough free memory to complete task")
+
             return 0
         
         # Return a score of 0 if there isn't a free CPU on the node to perform the task
         if (cpus_available < 1):
+            self.logger.debug("Edge node doesn't have enough free CPUs to complete task")
+
             return 0
                 
         # If task won't complete on edge node in time, return score of 0
         processing_time = self.calculate_processing_time(node["clock_speed"], task_cycles_required)
+        print(f"processing_time: {processing_time}")
+        print(f"node['clock_speed']: {node["clock_speed"]}")
         if (processing_time > task_deadline_s):
+            self.logger.debug("Task won't execute on edge node before deadline")
+
             return 0
         
         # Calculate resource used if task were to be scheduled

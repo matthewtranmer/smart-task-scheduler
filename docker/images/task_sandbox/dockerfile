@@ -23,7 +23,7 @@ RUN mkdir -p /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/ab
     && chmod 1777 /tmp /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing \
     && chown -R root:root /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing
 
-RUN pip install tflite-runtime pillow keras cryptography protobuf rembg onnxruntime
+RUN pip install tflite-runtime pillow keras cryptography protobuf onnxruntime opencv-python-headless
 RUN pip install numpy==1.24.0
 COPY docker/images/task_sandbox/main.py /app/main.py
 COPY docker/src/ /app/src/

@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10
 
 ENV HOME=/tmp
 ENV ULTRALYTICS_CONFIG_DIR=/tmp/Ultralytics
@@ -23,7 +23,7 @@ RUN mkdir -p /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/ab
     && chmod 1777 /tmp /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing \
     && chown -R root:root /tmp/xdg-config /tmp/xdg-config/matplotlib /tmp/Ultralytics /tmp/absl_testing
 
-RUN pip install tflite-runtime pillow keras cryptography protobuf rembg onnxruntime
+RUN pip install tflite-runtime pillow keras cryptography protobuf onnxruntime opencv-python-headless
 RUN pip install numpy==1.24.0
 COPY docker/images/test_sandbox/orange.png /app/orange.png
 COPY docker/images/test_sandbox/main.py /app/main.py
@@ -33,16 +33,5 @@ COPY lib/scheduler.py /app/lib/scheduler.py
 
 RUN python -m compileall -q /usr/local/lib/python*/site-packages
 # RUN python -c "from rembg import new_session; new_session('u2netp')"
-
-RUN python - <<'PY'
-import multiprocessing as mp
-
-def main():
-    from rembg import new_session
-    new_session('u2netp')
-
-with mp.Pool(1) as pool:
-    pool.apply(main)
-PY
 
 ENTRYPOINT [ "python3", "-u", "main.py" ]

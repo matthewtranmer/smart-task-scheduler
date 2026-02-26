@@ -1,0 +1,23 @@
+FROM python:3.10-slim
+
+ENV ORT_LOG_SEVERITY_LEVEL=3
+
+WORKDIR /app
+
+# ---- system deps (add more if your app needs them) ----
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pip install numpy==1.24.0
+RUN pip install onnxruntime opencv-python-headless pillow
+
+COPY docker/images/test1/main.py /app/main.py
+COPY docker/src/shared_task_data/u2netp.onnx /app/u2netp.onnx 
+COPY docker/images/test1/orange.png /app/orange.png
+COPY docker/images/test1/ballon.png /app/ballon.png
+
+# ---- default command (adjust to your app) ----
+# Example:
+# CMD ["python", "-m", "your_module"]
+CMD ["python", "-u", "/app/main.py"]

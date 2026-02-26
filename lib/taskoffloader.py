@@ -85,6 +85,28 @@ class TaskOffloader:
         task.cycles_required = 1
 
         return self._submitTask(task)
+    
+    def fruit_size(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
+        task = edge_pb2.Task()
+        task.taskID = Tasks.FRUIT_SIZE
+        task.input = image_bytes
+        task.memory_requirement_mb = 600
+        task.deadline_ms = deadline_ms
+        task.cycles_required = 129200000
+
+        return self._submitTask(task)
+    
+    def fruit_defects(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
+        task = edge_pb2.Task()
+        task.taskID = Tasks.FRUIT_DEFECTS
+        task.input = image_bytes
+        task.memory_requirement_mb = 600
+        task.deadline_ms = deadline_ms
+        task.cycles_required = 129200000
+
+        return self._submitTask(task)
+
+    # Fake tasks ************
 
     def addition(self, key: bytes, a: int, b: int, deadline_ms: int) -> edge_pb2.Response:
         params = {"a": a, "b": b}
