@@ -1,7 +1,8 @@
 import random
 import socket, threading, logging, traceback, time, json
-from lib import edge_pb2, net
+from lib import edge_pb2, net, dagtask, task_definitions
 from lib import scheduler as s
+import parallel_tasks
 from diagnostics import Diagnostics
 from dataclasses import dataclass
 
@@ -111,7 +112,14 @@ class EdgeAccess:
         # Create the task object
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
-        task.inputID = random.randint(1000000000,2147483640)
+        task.inputID = random.randint(1000000000, 2147483640)
+
+        # Populate task resource parameters if not a parallel task
+        if task.taskID not in task_definitions.parallel_task_IDs:
+            parameters: task_definitions.TaskParameters = task_definitions.task_parameters[task.taskID]
+
+            task.cycles_required = parameters.cycles
+            task.memory_requirement_mb = parameters.memory_mb
 
         # If task deadline greater than threshold, add task to queue
         if (task.deadline_ms / 1000 > self.priority_task_threshold_s):
@@ -120,29 +128,63 @@ class EdgeAccess:
             self.logger.info("Priority task detected, fast tracking scheduling...")
             threading.Thread(target=self.execute_task, args=(task, client_socket)).start()
 
-
     # Called every queue_wait_time_s seconds
     # Flushes the task queue; sceduling each task
     def run_tasks(self):
         queue: list[TaskInformation] = self.task_queue.flush_queue()
 
-        for task in queue:
-            threading.Thread(target=self.execute_task, args=(task.task, task.client_socket)).start()
+        for task_infomation in queue:
+            # Test to see if task is a DAG task
+            if task_infomation.task.taskID in parallel_tasks.dag_tasks:
+                task_graph: dagtask.TaskDependancyGraph = parallel_tasks.dag_tasks[task_infomation.task.taskID](
+
+                )
+
+                start_tasks = task_graph.get_start_tasks()
+
+                for task in start_tasks:
+                    threading.Thread(target=self.execute_sub_task, args=(task_infomation.task, task_infomation.client_socket)).start()
+
+                    pass # Execute each task
+
+            # Normal task
+            else:
+                threading.Thread(target=self.execute_normal_task, args=(task_infomation.task, task_infomation.client_socket)).start()
 
         # Recall function after delay
         threading.Timer(self.queue_wait_time_s, self.run_tasks).start()
 
-    # Executed in separate threads
-    def execute_task(self, task: edge_pb2.Task, client_socket: socket.socket):
+    def handle_task_offload(self, task: edge_pb2.Task) -> tuple[bytes, bool]:
         self.logger.info(f"Executing task with ID {task.taskID} and deadline {task.deadline_ms}")
 
+        success = False
         # Send the task to a node
         try:
             response = self.send_to_node(task)
+            success = True
         except s.NoNodesExeception as e:
             response = net.createResponse(False, e.message.encode(), response_code=500).SerializeToString()
         except s.TaskDroppedExeception as e:
             response = net.createResponse(False, e.message.encode(), response_code=551).SerializeToString()
+
+        return response, success
+
+    def execute_sub_task(self, task: edge_pb2.Task, task_graph: dagtask.TaskDependancyGraph):
+        # Execute task
+        response, success = self.handle_task_offload(task)
+
+        # TODO: handle task failures
+
+        # call task_graph.update state
+        if success:
+            task_graph.update_state()
+
+        pass
+
+    # Executed in separate threads
+    def execute_normal_task(self, task: edge_pb2.Task, client_socket: socket.socket):
+        # Offload task to compute
+        response, _ = self.handle_task_offload(task)
 
         # Return the response to the remote client
         header = net.createHeader(net.Commands.SCHEDULE_TASK)

@@ -16,9 +16,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.DETECT_HUMAN
         task.input = image_bytes
-        task.memory_requirement_mb = 100
         task.deadline_ms = deadline_ms
-        task.cycles_required = 632400000
 
         return self._submitTask(task)
     
@@ -26,9 +24,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.CLASSIFY_FRUIT
         task.input = image_bytes
-        task.memory_requirement_mb = 300
         task.deadline_ms = deadline_ms
-        task.cycles_required = 309400000
 
         return self._submitTask(task)
     
@@ -36,9 +32,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.FRUIT_QUALITY
         task.input = image_bytes
-        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
-        task.cycles_required = 129200000
 
         return self._submitTask(task)
 
@@ -48,9 +42,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.COMPRESSION
         task.input = data
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -60,9 +52,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.DECOMPRESSION
         task.input = data
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -70,9 +60,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.ENCRYPTION
         task.input = data
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -80,9 +68,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.ENCRYPTION
         task.input = data
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -90,9 +76,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.FRUIT_SIZE
         task.input = image_bytes
-        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
-        task.cycles_required = 129200000
 
         return self._submitTask(task)
     
@@ -100,9 +84,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.FRUIT_DEFECTS
         task.input = image_bytes
-        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
-        task.cycles_required = 129200000
 
         return self._submitTask(task)
     
@@ -110,9 +92,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.OBJECT_COUNT
         task.input = image_bytes
-        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
-        task.cycles_required = 129200000
 
         return self._submitTask(task)
 
@@ -125,9 +105,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.ADDITION
         task.input = json_params.encode()
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -138,9 +116,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.MULTIPLICATION
         task.input = json_params.encode()
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -151,9 +127,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.DIVISION
         task.input = json_params.encode()
-        task.memory_requirement_mb 
         task.deadline_ms = deadline_ms
-        task.cycles_required = 1
 
         return self._submitTask(task)
     
@@ -163,9 +137,7 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.ORANGE_QUALITY_RIPENESS
         task.input = image_bytes
-        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
-        task.cycles_required = 129200000
 
         return self._submitTask(task)
 
@@ -173,13 +145,9 @@ class TaskOffloader:
         task = edge_pb2.Task()
         task.taskID = Tasks.BANANA_QUALITY_RIPENESS
         task.input = image_bytes
-        task.memory_requirement_mb = 600
         task.deadline_ms = deadline_ms
-        task.cycles_required = 129200000
 
         return self._submitTask(task)
-    
-
 
 
     def _submitTask(self, task) -> edge_pb2.Response:

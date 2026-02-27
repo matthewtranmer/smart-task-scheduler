@@ -25,40 +25,6 @@ class TaskDroppedExeception(Exception):
     def __str__(self):
         return f"{self.message}"
     
-class Tasks():
-    # *** Non-parallel tasks ***
-    DETECT_HUMAN = 0
-    CLASSIFY_FRUIT = 1
-    FRUIT_QUALITY = 2
-    COMPRESSION = 3
-    DECOMPRESSION = 4
-    ENCRYPTION = 5
-    DECRYPTION = 6
-    BANANA_QUALITY_RIPENESS = 7
-    ORANGE_QUALITY_RIPENESS = 8
-    FRUIT_SIZE = 9
-    FRUIT_DEFECTS = 10
-    OBJECT_COUNT = 11
-
-    # Test tasks
-    ADDITION = 10001
-    MULTIPLICATION = 10002
-    DIVISION = 10003
-
-    @staticmethod
-    def getName(task_id):
-        names = {
-            Tasks.DETECT_HUMAN: "Detect Human",
-            Tasks.CLASSIFY_FRUIT: "Classify Fruit",
-            Tasks.FRUIT_QUALITY: "Fruit Quality",
-            Tasks.COMPRESSION: "Compression",
-            Tasks.ENCRYPTION: "Encryption",
-            Tasks.ADDITION: "Addition",
-            Tasks.MULTIPLICATION: "Multiplication",
-            Tasks.DIVISION: "Division",
-        }
-        return names.get(task_id, f"Unknown({task_id})")
-
 class NodeType:
     EDGE = 0
     CLOUD = 1
