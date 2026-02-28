@@ -1,6 +1,6 @@
 import socket, json, base64
 from lib import edge_pb2, net
-from lib.scheduler import Tasks 
+from lib.task_definitions import TaskIDs
 
 def decode_binary(binary_in: str) -> bytes:
     return base64.decodebytes(binary_in.encode())
@@ -14,7 +14,7 @@ class TaskOffloader:
 
     def detectHuman(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.DETECT_HUMAN
+        task.taskID = TaskIDs.DETECT_HUMAN
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -22,7 +22,7 @@ class TaskOffloader:
     
     def classifyFruit(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.CLASSIFY_FRUIT
+        task.taskID = TaskIDs.CLASSIFY_FRUIT
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -30,7 +30,7 @@ class TaskOffloader:
     
     def fruitQuality(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.FRUIT_QUALITY
+        task.taskID = TaskIDs.FRUIT_QUALITY
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -40,7 +40,7 @@ class TaskOffloader:
     # - returns compressed data in bytes
     def compress(self, data: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.COMPRESSION
+        task.taskID = TaskIDs.COMPRESSION
         task.input = data
         task.deadline_ms = deadline_ms
 
@@ -50,7 +50,7 @@ class TaskOffloader:
     # - returns decompressed data as base64 string
     def decompress(self, data: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.DECOMPRESSION
+        task.taskID = TaskIDs.DECOMPRESSION
         task.input = data
         task.deadline_ms = deadline_ms
 
@@ -58,7 +58,7 @@ class TaskOffloader:
     
     def encrypt(self, key: bytes, plaintext: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.ENCRYPTION
+        task.taskID = TaskIDs.ENCRYPTION
         task.input = data
         task.deadline_ms = deadline_ms
 
@@ -66,7 +66,7 @@ class TaskOffloader:
     
     def decrypt(self, key: bytes, ciphertext: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.ENCRYPTION
+        task.taskID = TaskIDs.ENCRYPTION
         task.input = data
         task.deadline_ms = deadline_ms
 
@@ -74,7 +74,7 @@ class TaskOffloader:
     
     def fruit_size(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.FRUIT_SIZE
+        task.taskID = TaskIDs.FRUIT_SIZE
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -82,7 +82,7 @@ class TaskOffloader:
     
     def fruit_defects(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.FRUIT_DEFECTS
+        task.taskID = TaskIDs.FRUIT_DEFECTS
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -90,7 +90,24 @@ class TaskOffloader:
     
     def object_count(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.OBJECT_COUNT
+        task.taskID = TaskIDs.OBJECT_COUNT
+        task.input = image_bytes
+        task.deadline_ms = deadline_ms
+
+        return self._submitTask(task)
+    
+    # Parallel tasks ***********
+    def banana_quality_rating(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
+        task = edge_pb2.Task()
+        task.taskID = TaskIDs.BANANA_QUALITY_RATING
+        task.input = image_bytes
+        task.deadline_ms = deadline_ms
+
+        return self._submitTask(task)
+    
+    def orange_quality_rating(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
+        task = edge_pb2.Task()
+        task.taskID = TaskIDs.ORANGE_QUALITY_RATING
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -103,7 +120,7 @@ class TaskOffloader:
         json_params = json.dumps(params)
         
         task = edge_pb2.Task()
-        task.taskID = Tasks.ADDITION
+        task.taskID = TaskIDs.ADDITION
         task.input = json_params.encode()
         task.deadline_ms = deadline_ms
 
@@ -114,7 +131,7 @@ class TaskOffloader:
         json_params = json.dumps(params)
         
         task = edge_pb2.Task()
-        task.taskID = Tasks.MULTIPLICATION
+        task.taskID = TaskIDs.MULTIPLICATION
         task.input = json_params.encode()
         task.deadline_ms = deadline_ms
 
@@ -125,7 +142,7 @@ class TaskOffloader:
         json_params = json.dumps(params)
         
         task = edge_pb2.Task()
-        task.taskID = Tasks.DIVISION
+        task.taskID = TaskIDs.DIVISION
         task.input = json_params.encode()
         task.deadline_ms = deadline_ms
 
@@ -135,7 +152,7 @@ class TaskOffloader:
 
     def _test_orange_ripeness(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.ORANGE_QUALITY_RIPENESS
+        task.taskID = TaskIDs.ORANGE_QUALITY_RIPENESS
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 
@@ -143,7 +160,7 @@ class TaskOffloader:
 
     def _test_banana_ripeness(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = Tasks.BANANA_QUALITY_RIPENESS
+        task.taskID = TaskIDs.BANANA_QUALITY_RIPENESS
         task.input = image_bytes
         task.deadline_ms = deadline_ms
 

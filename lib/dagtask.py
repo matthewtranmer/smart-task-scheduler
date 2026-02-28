@@ -1,4 +1,4 @@
-import random, socket
+import random, json, base64
 from lib import edge_pb2, task_definitions
 from collections import deque
 
@@ -21,10 +21,7 @@ class TaskDependencyGraph():
     
     result_storage: dict[int, bytes] = {}
 
-    client_socket: socket.socket
-
-    def __init__(self, client_socket: socket.socket, deadline_s: float):
-        self.client_socket = client_socket
+    def __init__(self, deadline_s: float):
         self.deadline_s = deadline_s
 
     # Returns the subtasks deadline in seconds
@@ -117,7 +114,7 @@ class TaskDependencyGraph():
         return []
     
     def calculate_layer_deadlines(self):
-        layers = self.get_DAG_layers()
+        layers: list[list[DAGNode]] = self.get_DAG_layers()
         # Pop first and last layer (start and stop layers)
         layers.pop()
         layers.pop(0)
@@ -132,7 +129,8 @@ class TaskDependencyGraph():
         for layer in layers:
             max_cycles = 0
 
-            for node in layer:
+            for node_id in layer:
+                node = self.get_node(node_id)
                 cycles = task_definitions.task_parameters[node.task_id].cycles
 
                 if cycles > max_cycles:
@@ -146,8 +144,8 @@ class TaskDependencyGraph():
             deadline = max_cycles / total_cycles_per_layer * self.deadline_s
             self.layer_deadlines.append(deadline)
 
-    #  Return a manifest of the start tasks
-    def get_start_tasks(self) -> list[edge_pb2.Task]:
+    #  Return a manifest of the start tasks and the node ids
+    def get_start_tasks(self, input_data: bytes) -> tuple[list[edge_pb2.Task], list[int]]:
         self.calculate_layer_deadlines()
 
         start_task_nodes: list[DAGNode] = []
@@ -155,9 +153,10 @@ class TaskDependencyGraph():
         # Get start tasks
         for key in self.dependency_list:
             if self.dependency_list[key] == [0, ]:
-                start_task_nodes.append(key)
+                start_task_nodes.append(self.get_node(key))
 
         tasks = []
+        nodes = []
         for node in start_task_nodes:
             params = task_definitions.task_parameters[node.task_id]
 
@@ -166,22 +165,27 @@ class TaskDependencyGraph():
             task.taskID = node.task_id
             task.cycles_required = params.cycles
             task.memory_requirement_mb = params.memory_mb
-            task.deadline_ms = self.layer_deadlines[0]
+            task.deadline_ms = int(self.layer_deadlines[0] * 1000) # Convert to ms
+            task.input = input_data
 
             tasks.append(task)
+            nodes.append(node.node_id)
 
-        return tasks
+        return tasks, nodes
 
     # Called when a subtask has finished executing
     # Returns a list of tasks that can now be executed with their data populated
+    # Returns their node IDs within the graph
     # Returns True when the DAG task is complete
-    def update_state(self, completed_node_id: int, result: bytes) -> list[edge_pb2.Task, bool]:
+    # Sets self.final_result when completed
+    def update_state(self, completed_node_id: int, result: bytes) -> tuple[list[edge_pb2.Task], list[int], bool]:
         self.result_storage[completed_node_id] = result
         self.get_node(completed_node_id).completed = True
         self.completed_nodes += 1
 
         if self.completed_nodes >= len(self.nodes):
-            return [], True
+            self.final_result = result
+            return [], [], True
 
         # Find nodes that were dependent on this task
         dependent_nodes = []
@@ -211,6 +215,7 @@ class TaskDependencyGraph():
                 executable_nodes.append(self.get_node(node_id))
 
         tasks = []
+        nodes = []
         for node in executable_nodes:
             params = task_definitions.task_parameters[node.task_id]
 
@@ -219,8 +224,21 @@ class TaskDependencyGraph():
             task.taskID = node.task_id
             task.cycles_required = params.cycles
             task.memory_requirement_mb = params.memory_mb
-            task.deadline_ms = self.layer_deadlines[0]
+            task.deadline_ms = int(self.layer_deadlines[0] * 1000) # Convert to ms
+            
+            # Get input from dependent nodes - labeled by task id
+            input_list = {}
+            dependent_nodes = self.dependency_list[node.node_id]
 
+            for dependent_node_id in dependent_nodes:
+                dependent_task_id = self.get_node(dependent_node_id).task_id
+
+                print(f"New input detected: {self.result_storage[dependent_node_id]}")
+                input_list[dependent_task_id] = self.result_storage[dependent_node_id].decode()
+
+            task.input = json.dumps(input_list).encode()
+
+            nodes.append(node.node_id)
             tasks.append(task)
 
-        return tasks, False
+        return tasks, nodes, False

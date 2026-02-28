@@ -60,7 +60,7 @@ class Diagnostics:
             assigned_node = "cloud"
 
         self.job_history.append({
-            "name": s.Tasks.getName(task.taskID),
+            "name": str(task.taskID),
             "assigned_node": assigned_node,
             "processing_time": processing_time_ms,
             "deadline": task.deadline_ms,

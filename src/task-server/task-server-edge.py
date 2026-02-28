@@ -51,9 +51,10 @@ class EdgeClient:
         self.heartbeatSender()
 
         try:
-            cpus = system.getPhysicalCpuIds()
+            total_cpus = system.getPhysicalCpuIds()
+            allowed_cpus = total_cpus[:self.cpus]
 
-            with container.StaticContainerPool(container_image, cpus) as container_pool:
+            with container.StaticContainerPool(container_image, allowed_cpus) as container_pool:
                 while True:
                     sock, addr = self.server.accept()
                     sock.settimeout(timeout)
@@ -125,12 +126,14 @@ class EdgeClient:
                     self.logger.info(f"Executed task with id {task.taskID}, processing time {response.processing_time_ms}ms")
 
                     if (response.error):
-                        self.logger.info(response.traceback)
+                        self.logger.warning(f"Received error while processing task with id {task.taskID}")
+                        self.logger.warning(response.traceback)
                         return net.createResponse(False, response.traceback)
 
                     return net.createResponse(True, response.value)
 
                 except container.InternalContainerError as e:
+                    self.logger.error(f"Error response while executing task with ID {task.taskID}")
                     self.logger.exception(e)
                     return net.createResponse(False, b"Internal container error encountered while executing task")
                 
@@ -145,7 +148,7 @@ class EdgeClient:
         task.ParseFromString(payload)
 
         try:
-            logging.debug("Running task")
+            logging.info(f"Received task with ID: {task.taskID}")
             return self.runTask(task, container_pool)
         
         except container.NoContainersExeception:
@@ -195,7 +198,7 @@ def main(address):
     edge_client = EdgeClient(
         logger=logger,
         access_server_address=access_server_address,
-        cpus=4,
+        cpus=1,
         clock_speed_cps=4*10**9,
         memory_mb=8000
     )

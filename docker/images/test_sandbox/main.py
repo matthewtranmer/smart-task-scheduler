@@ -6,22 +6,21 @@ import sys, json, traceback, time
 from src import task
 from lib import edge_pb2
 
-
 print("Finished imports")
 
-def read_data() -> bytes:
-    length_bytes = sys.stdin.buffer.read(4)
-    buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
+# def read_data() -> bytes:
+#     length_bytes = sys.stdin.buffer.read(4)
+#     buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
 
-    received_data = b""
-    while len(received_data) < buffer_length:
-        received_data += sys.stdin.buffer.read(buffer_length - len(received_data))
+#     received_data = b""
+#     while len(received_data) < buffer_length:
+#         received_data += sys.stdin.buffer.read(buffer_length - len(received_data))
 
-    return received_data
+#     return received_data
 
-def write_data(data: bytes):
-    sys.stdout.buffer.write(len(data).to_bytes(4, byteorder="big", signed=False) + data)
-    sys.stdout.buffer.flush()
+# def write_data(data: bytes):
+#     sys.stdout.buffer.write(len(data).to_bytes(4, byteorder="big", signed=False) + data)
+#     sys.stdout.buffer.flush()
 
 def main():
     print("Started!")
@@ -30,24 +29,24 @@ def main():
 
     FRUIT_SIZE = 9
     FRUIT_DEFECTS = 10
-
-    current_task = 11
-
-    print("Running....")
-
-    result = task.run_task(current_task, image_bytes)
-    print(result)
-
-    print("Waiting....")
-    time.sleep(5)
+    current_task = FRUIT_SIZE
 
     print("Running....")
 
     result = task.run_task(current_task, image_bytes)
     print(result)
 
-    while (True):
-        pass
+    # print("Waiting 5 seconds....")
+    # time.sleep(5)
+
+    # print("Running....")
+
+    # result = task.run_task(current_task, image_bytes)
+    # print(result)
+
+    # input("Press enter to continue...")
+
+    time.sleep(1000000)
 
 
 

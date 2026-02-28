@@ -1,5 +1,5 @@
 import base64
-from lib.scheduler import Tasks
+from lib.task_definitions import TaskIDs
 
 from src.tasks.detect_human.detect_human import detectHuman
 from src.tasks.classify_fruit.classify_fruit import classifyFruit
@@ -14,6 +14,8 @@ from src.tasks.fruit_defects.fruit_defects import fruit_defects
 from src.tasks.fruit_size.fruit_size import fruit_size
 
 from src.tasks.object_count.object_count import object_count
+
+from src.tasks.fruit_quality_aggregation.fruit_quality_aggregation import fruit_quality_aggregation
 
 # Test tasks
 from src.tasks.addition.addition import addition
@@ -34,40 +36,43 @@ def run_task(taskID: int, data: bytes) -> bytes:
     result = ""
 
     match taskID:
-        case Tasks.DETECT_HUMAN:
+        case TaskIDs.DETECT_HUMAN:
             result = detectHuman(data)
-        case Tasks.CLASSIFY_FRUIT:
+        case TaskIDs.CLASSIFY_FRUIT:
             result = classifyFruit(data)
-        case Tasks.FRUIT_QUALITY:
+        case TaskIDs.FRUIT_QUALITY:
             result = fruitQuality(data)
-        case Tasks.COMPRESSION:
+        case TaskIDs.COMPRESSION:
             result = compress(data)
-        case Tasks.DECOMPRESSION:
+        case TaskIDs.DECOMPRESSION:
             result = decompress(data)
-        case Tasks.ENCRYPTION:
+        case TaskIDs.ENCRYPTION:
             result = encrypt(data)
-        case Tasks.DECRYPTION:
+        case TaskIDs.DECRYPTION:
             result = decrypt(data)
         
-        case Tasks.BANANA_QUALITY_RIPENESS:
+        case TaskIDs.BANANA_QUALITY_RIPENESS:
             result = banana_ripeness(data)
-        case Tasks.ORANGE_QUALITY_RIPENESS:
+        case TaskIDs.ORANGE_QUALITY_RIPENESS:
             result = orange_ripeness(data)
 
-        case Tasks.FRUIT_DEFECTS:
+        case TaskIDs.FRUIT_DEFECTS:
             result = fruit_defects(data)
-        case Tasks.FRUIT_SIZE:
+        case TaskIDs.FRUIT_SIZE:
             result = fruit_size(data)
         
-        case Tasks.OBJECT_COUNT:
+        case TaskIDs.OBJECT_COUNT:
             result = object_count(data)
 
+        case TaskIDs.FRUIT_QUALITY_AGGREGATION:
+            result = fruit_quality_aggregation(data)
+
         # Test tasks
-        case Tasks.ADDITION:
+        case TaskIDs.ADDITION:
             result = addition(data)
-        case Tasks.MULTIPLICATION:
+        case TaskIDs.MULTIPLICATION:
             result = multiplication(data)
-        case Tasks.DIVISION:
+        case TaskIDs.DIVISION:
             result = division(data)
 
     return result

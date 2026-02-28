@@ -1,6 +1,6 @@
 import sys, logging, socket, time, json, threading
 from lib import net, edge_pb2
-from lib.scheduler import Tasks
+from lib.task_definitions import TaskIDs
 
 def handleRequest(remote, addr):
     print("Accepted connection")
@@ -20,16 +20,19 @@ def handleRequest(remote, addr):
 
     # Simulate task execution
     match task.inputID:
-        case Tasks.DETECT_HUMAN:
+        case TaskIDs.DETECT_HUMAN:
             time.sleep(0.188)
-        case Tasks.CLASSIFY_FRUIT:
+        case TaskIDs.CLASSIFY_FRUIT:
             time.sleep(0.095)
-        case Tasks.FRUIT_QUALITY:
+        case TaskIDs.FRUIT_QUALITY:
             time.sleep(0.04)
-        case Tasks.COMPRESSION:
+        case TaskIDs.COMPRESSION:
             time.sleep(0.03)
-        case Tasks.ENCRYPTION:
+        case TaskIDs.ENCRYPTION:
             time.sleep(0.03)
+        case _:
+            print("Task not detected")
+            time.sleep(0.4)
 
     response_text = {"value": "EXECUTED ON CLOUD", "inputID": task.inputID}
     response = net.createResponse(True, json.dumps(response_text).encode()).SerializeToString()
