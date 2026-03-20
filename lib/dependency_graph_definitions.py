@@ -8,26 +8,24 @@ class BananaQualityRating(d.TaskDependencyGraph):
         self.task_id = TaskIDs.BANANA_QUALITY_RATING
 
         # Create Graph Nodes
-        ripeness_id = self.add_node(d.DAGNode(TaskIDs.BANANA_QUALITY_RIPENESS))
-        defects_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_DEFECTS))
-        size_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_SIZE))
-        quality_aggregation_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_QUALITY_AGGREGATION))
-
-        self.ripeness_id = ripeness_id
-        self.defects_id = defects_id
-        self.size_id = size_id
-        self.quality_grading_id = quality_aggregation_id
+        self.remove_bg_id = self.add_node(d.DAGNode(TaskIDs.REMOVE_BACKGROUND))
+        self.ripeness_id = self.add_node(d.DAGNode(TaskIDs.BANANA_QUALITY_RIPENESS))
+        self.defects_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_DEFECTS))
+        self.size_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_SIZE))
+        self.quality_aggregation_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_QUALITY_AGGREGATION))
 
         # Create Graph Links
-        self.add_link(ripeness_id, 0)
-        self.add_link(defects_id, 0)
-        self.add_link(size_id, 0)
+        self.add_link(self.ripeness_id, 0)
+        self.add_link(self.remove_bg_id, 0)
 
-        self.add_link(quality_aggregation_id, ripeness_id)
-        self.add_link(quality_aggregation_id, defects_id)
-        self.add_link(quality_aggregation_id, size_id)
+        self.add_link(self.defects_id, self.remove_bg_id)
+        self.add_link(self.size_id, self.remove_bg_id)
 
-        self.add_link(-1, quality_aggregation_id)
+        self.add_link(self.quality_aggregation_id, self.ripeness_id)
+        self.add_link(self.quality_aggregation_id, self.defects_id)
+        self.add_link(self.quality_aggregation_id, self.size_id)
+
+        self.add_link(-1, self.quality_aggregation_id)
 
 class OrangeQualityRating(d.TaskDependencyGraph):
     def __init__(self, deadline_s: float):
@@ -36,26 +34,24 @@ class OrangeQualityRating(d.TaskDependencyGraph):
         self.task_id = TaskIDs.ORANGE_QUALITY_RATING
 
         # Create Graph Nodes
-        ripeness_id = self.add_node(d.DAGNode(TaskIDs.ORANGE_QUALITY_RIPENESS))
-        defects_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_DEFECTS))
-        size_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_SIZE))
-        quality_aggregation_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_QUALITY_AGGREGATION))
-
-        self.ripeness_id = ripeness_id
-        self.defects_id = defects_id
-        self.size_id = size_id
-        self.quality_grading_id = quality_aggregation_id
+        self.remove_bg_id = self.add_node(d.DAGNode(TaskIDs.REMOVE_BACKGROUND))
+        self.ripeness_id = self.add_node(d.DAGNode(TaskIDs.ORANGE_QUALITY_RIPENESS))
+        self.defects_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_DEFECTS))
+        self.size_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_SIZE))
+        self.quality_aggregation_id = self.add_node(d.DAGNode(TaskIDs.FRUIT_QUALITY_AGGREGATION))
 
         # Create Graph Links
-        self.add_link(ripeness_id, 0)
-        self.add_link(defects_id, 0)
-        self.add_link(size_id, 0)
+        self.add_link(self.ripeness_id, 0)
+        self.add_link(self.remove_bg_id, 0)
 
-        self.add_link(quality_aggregation_id, ripeness_id)
-        self.add_link(quality_aggregation_id, defects_id)
-        self.add_link(quality_aggregation_id, size_id)
+        self.add_link(self.defects_id, self.remove_bg_id)
+        self.add_link(self.size_id, self.remove_bg_id)
 
-        self.add_link(-1, quality_aggregation_id)
+        self.add_link(self.quality_aggregation_id, self.ripeness_id)
+        self.add_link(self.quality_aggregation_id, self.defects_id)
+        self.add_link(self.quality_aggregation_id, self.size_id)
+
+        self.add_link(-1, self.quality_aggregation_id)
 
 parallel_task_IDs = [
     TaskIDs.BANANA_QUALITY_RATING,

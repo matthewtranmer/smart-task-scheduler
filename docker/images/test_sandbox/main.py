@@ -30,8 +30,6 @@ def main():
     FRUIT_SIZE = 9
     FRUIT_DEFECTS = 10
     REMOVE_BACKGROUND = 13
-    current_task = REMOVE_BACKGROUND
-
 
     print("Running....")
 

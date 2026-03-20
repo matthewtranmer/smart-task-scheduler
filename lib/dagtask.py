@@ -5,10 +5,21 @@ from collections import deque
 class DAGNode():
     node_id: int
     task_id: int
+    task: edge_pb2.Task
     completed: bool = False
 
     def __init__(self, task_id):
         self.task_id = task_id
+
+        params = task_definitions.task_parameters[task_id]
+
+        self.task = edge_pb2.Task()
+        self.task.inputID = random.randint(1000000000, 2147483640)
+        self.task.taskID = task_id
+        self.task.cycles_required = params.cycles
+        self.task.memory_requirement_mb = params.memory_mb
+        self.task.deadline_ms = 0
+
         self.node_id = random.randint(1, 999999999999999999999999999999)
 
 # TODO: Make threadsafe
@@ -23,10 +34,7 @@ class TaskDependencyGraph():
 
     def __init__(self, deadline_s: float):
         self.deadline_s = deadline_s
-
-    # Returns the subtasks deadline in seconds
-    def calc_subtask_deadline(self, subtask_cycles: int) -> float:
-        return subtask_cycles/self.total_subtask_cycles * self.deadline_s
+        self.deadline_ms = deadline_s * 1000
 
     def add_node(self, node: DAGNode):
         self.nodes.append(node)
@@ -61,92 +69,77 @@ class TaskDependencyGraph():
         else:
             self.dependency_list[target_node_id].append(dependent_node_id)
 
-    # Layered topological sorting using Kahn’s algorithm
-    # based on iterative in-degree elimination
-    def get_DAG_layers(self):    
-        # Calculate number of edges coming into each node
-        in_degree = {}
-        for u in self.dependency_list:
-            for v in self.dependency_list[u]:
-                if v not in in_degree:
-                    in_degree[v] = 0
-
-                in_degree[v] += 1
-
-            if u not in in_degree:
-                if u not in in_degree:
-                    in_degree[u] = 0
-
-                in_degree[u] = in_degree[u]
-
-        # Find inital nodes
-        inital_nodes = []
-        for n in in_degree:
-            if in_degree[n] == 0:
-                inital_nodes.append(n)
-
-        # Create queue with inital nodes
-        queue = deque(inital_nodes)
-        
-        # Build up layers
-        layers = []
-        while queue:
-            current_layer = list(queue)
-            layers.append(current_layer)
-            
-            next_queue = deque()
-            
-            while queue:
-                node = queue.popleft()
-                for neighbor in self.dependency_list.get(node, []):
-                    in_degree[neighbor] -= 1
-                    if in_degree[neighbor] == 0:
-                        next_queue.append(neighbor)
-            
-            queue = next_queue
-
-        return layers
-
     def get_dependencies(self, node_id: int):
         if node_id in self.dependency_list:
             return self.dependency_list[node_id]
         
         return []
     
-    def calculate_layer_deadlines(self):
-        layers: list[list[DAGNode]] = self.get_DAG_layers()
-        # Pop first and last layer (start and stop layers)
-        layers.pop()
-        layers.pop(0)
+    def get_neighbours(self, node_id: int) -> list[int]:
+        neighbours = []
 
-        # Reverse layers so that the first layer is layer 1
-        # This is due to the fact the graph is stored as a depedency list
-        layers.reverse()
+        # Find all the nodes that have a dependency on node_id
+        for node in self.dependency_list:
+            if node_id in self.dependency_list[node]:
+                neighbours.append(node)
 
-        max_cycles_per_layer: list[int] = []
-        total_cycles_per_layer = 0
+        return neighbours
 
-        for layer in layers:
-            max_cycles = 0
+    # Get the paths in the graph using DFS
+    def get_paths(self):
+        start_nodes = []
+        end_nodes = self.dependency_list[self.END_NODE_ID]
 
-            for node_id in layer:
+        # Find start nodes
+        for node in self.dependency_list:
+            dependencies = self.dependency_list[node]
+
+            if self.START_NODE_ID in dependencies and len(dependencies) == 1:
+                start_nodes.append(node)
+
+        print(f"start nodes: {start_nodes}")
+        print(f"end nodes: {end_nodes}")
+
+        paths = []
+
+        for start in start_nodes:
+            stack = [(start, [start])]
+
+            while len(stack) > 0:
+                node, path = stack.pop()
+
+                if node in end_nodes:
+                    paths.append(path)
+                    continue
+
+                # Add neighbors to stack
+                for neighbor in self.get_neighbours(node):
+                    stack.append((neighbor, path + [neighbor]))
+
+        return paths
+
+    def calculate_task_deadlines(self):
+        paths = self.get_paths()
+
+        for path in paths:
+            path_weight = 0
+
+            # Calculate the path weight (total cycles required for the path)
+            for node_id in path:
                 node = self.get_node(node_id)
-                cycles = task_definitions.task_parameters[node.task_id].cycles
-
-                if cycles > max_cycles:
-                    max_cycles = cycles
-
-            total_cycles_per_layer += max_cycles
-            max_cycles_per_layer.append(max_cycles)
-
-        self.layer_deadlines: list[float] = []
-        for max_cycles in max_cycles_per_layer:
-            deadline = max_cycles / total_cycles_per_layer * self.deadline_s
-            self.layer_deadlines.append(deadline)
+                path_weight += node.task.cycles_required
+            
+            # Assign deadlines
+            for node_id in path:
+                node = self.get_node(node_id)
+                
+                node_deadline_ms = (node.task.cycles_required / path_weight) * self.deadline_ms
+                if node_deadline_ms < node.task.deadline_ms:
+                    node.task.deadline_ms = node_deadline_ms
 
     #  Return a manifest of the start tasks and the node ids
     def get_start_tasks(self, input_data: bytes) -> tuple[list[edge_pb2.Task], list[int]]:
-        self.calculate_layer_deadlines()
+        self.calculate_task_deadlines()
 
         start_task_nodes: list[DAGNode] = []
 
@@ -158,17 +151,9 @@ class TaskDependencyGraph():
         tasks = []
         nodes = []
         for node in start_task_nodes:
-            params = task_definitions.task_parameters[node.task_id]
+            node.task.input = input_data
 
-            task = edge_pb2.Task()
-            task.inputID = random.randint(1000000000, 2147483640)
-            task.taskID = node.task_id
-            task.cycles_required = params.cycles
-            task.memory_requirement_mb = params.memory_mb
-            task.deadline_ms = int(self.layer_deadlines[0] * 1000) # Convert to ms
-            task.input = input_data
-
-            tasks.append(task)
+            tasks.append(node.task)
             nodes.append(node.node_id)
 
         return tasks, nodes
@@ -217,15 +202,6 @@ class TaskDependencyGraph():
         tasks = []
         nodes = []
         for node in executable_nodes:
-            params = task_definitions.task_parameters[node.task_id]
-
-            task = edge_pb2.Task()
-            task.inputID = random.randint(1000000000, 2147483640)
-            task.taskID = node.task_id
-            task.cycles_required = params.cycles
-            task.memory_requirement_mb = params.memory_mb
-            task.deadline_ms = int(self.layer_deadlines[0] * 1000) # Convert to ms
-            
             # Get input from dependent nodes - labeled by task id
             input_list = {}
             dependent_nodes = self.dependency_list[node.node_id]
@@ -236,9 +212,9 @@ class TaskDependencyGraph():
                 print(f"New input detected: {self.result_storage[dependent_node_id]}")
                 input_list[dependent_task_id] = self.result_storage[dependent_node_id].decode()
 
-            task.input = json.dumps(input_list).encode()
+            node.task.input = json.dumps(input_list).encode()
 
             nodes.append(node.node_id)
-            tasks.append(task)
+            tasks.append(node.task)
 
         return tasks, nodes, False
