@@ -29,12 +29,19 @@ def main():
 
     FRUIT_SIZE = 9
     FRUIT_DEFECTS = 10
-    current_task = FRUIT_SIZE
+    REMOVE_BACKGROUND = 13
+    current_task = REMOVE_BACKGROUND
+
 
     print("Running....")
 
-    result = task.run_task(current_task, image_bytes)
-    print(result)
+    no_background = task.run_task(REMOVE_BACKGROUND, image_bytes)
+    
+    defects = task.run_task(FRUIT_DEFECTS, no_background)
+    print(f"defects: {defects}")
+
+    size = task.run_task(FRUIT_SIZE, no_background)
+    print(f"size: {size}")
 
     # print("Waiting 5 seconds....")
     # time.sleep(5)

@@ -17,6 +17,8 @@ from src.tasks.object_count.object_count import object_count
 
 from src.tasks.fruit_quality_aggregation.fruit_quality_aggregation import fruit_quality_aggregation
 
+from src.tasks.remove_background.remove_background import remove_background
+
 # Test tasks
 from src.tasks.addition.addition import addition
 from src.tasks.multiplication.multiplication import multiplication
@@ -66,6 +68,9 @@ def run_task(taskID: int, data: bytes) -> bytes:
 
         case TaskIDs.FRUIT_QUALITY_AGGREGATION:
             result = fruit_quality_aggregation(data)
+
+        case TaskIDs.REMOVE_BACKGROUND:
+            result = remove_background(data)
 
         # Test tasks
         case TaskIDs.ADDITION:

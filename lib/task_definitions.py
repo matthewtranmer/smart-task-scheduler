@@ -20,10 +20,11 @@ class TaskIDs():
     FRUIT_DEFECTS = 10
     FRUIT_QUALITY_AGGREGATION = 11
     OBJECT_COUNT = 12
+    REMOVE_BACKGROUND = 13
 
     # Parallel TaskIDs
-    BANANA_QUALITY_RATING = 13
-    ORANGE_QUALITY_RATING = 14
+    BANANA_QUALITY_RATING = 103
+    ORANGE_QUALITY_RATING = 104
 
     # Test TaskIDs
     ADDITION = 10001
@@ -44,5 +45,6 @@ task_parameters: dict[int, TaskParameters] = {
     TaskIDs.FRUIT_DEFECTS: TaskParameters(cycles=929200000, memory_mb=100),
     TaskIDs.FRUIT_QUALITY_AGGREGATION: TaskParameters(cycles=129200000, memory_mb=100),
     TaskIDs.OBJECT_COUNT: TaskParameters(cycles=129200000, memory_mb=100),
+    TaskIDs.REMOVE_BACKGROUND: TaskParameters(cycles=229200000, memory_mb=100),
 }
 
