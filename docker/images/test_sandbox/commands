@@ -1,0 +1,5 @@
+docker run --cpuset-cpus="2" test_sandbox 
+
+
+
+cat /sys/fs/cgroup/system.slice/docker-beec99c80bdd6a810992f0a7b8b2d969859ac736682903b947a494f3953fb5ec.scope/memory.peak
