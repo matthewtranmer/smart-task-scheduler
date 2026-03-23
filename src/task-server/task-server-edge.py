@@ -3,7 +3,6 @@ from lib import edge_pb2, net, container, system
 
 class EdgeClient:
     heartbeat_interval = 5
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def __init__(
             self,
@@ -15,6 +14,8 @@ class EdgeClient:
             ip=None, 
             port=0
         ):
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         self.access_server_address = access_server_address
         self.logger = logger
 
@@ -198,7 +199,7 @@ def main(address):
     edge_client = EdgeClient(
         logger=logger,
         access_server_address=access_server_address,
-        cpus=1,
+        cpus=4,
         clock_speed_cps=4*10**9,
         memory_mb=8000
     )

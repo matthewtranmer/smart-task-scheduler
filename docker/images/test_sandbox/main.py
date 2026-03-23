@@ -5,6 +5,7 @@ print("First line")
 import sys, json, traceback, time
 from src import task
 from lib import edge_pb2
+import base64
 
 print("Finished imports")
 
@@ -31,15 +32,24 @@ def main():
     FRUIT_DEFECTS = 10
     REMOVE_BACKGROUND = 13
 
-    print("Running....")
+    print("Starting background removal")
+    t0 = time.perf_counter()
 
-    no_background = task.run_task(REMOVE_BACKGROUND, image_bytes)
-    
+    no_background = json.dumps({
+        "13": base64.encodebytes(task.run_task(REMOVE_BACKGROUND, image_bytes)).decode()
+    })
+
+    t1 = time.perf_counter()
+    print(f"Background removal finished. Execution: {t1 - t0}")
+
+    print("Starting defects")
+    t0 = time.perf_counter()
+
     defects = task.run_task(FRUIT_DEFECTS, no_background)
     print(f"defects: {defects}")
 
-    size = task.run_task(FRUIT_SIZE, no_background)
-    print(f"size: {size}")
+    t1 = time.perf_counter()
+    print(f"Finishing defects. Execution: {t1 - t0}")
 
     # print("Waiting 5 seconds....")
     # time.sleep(5)

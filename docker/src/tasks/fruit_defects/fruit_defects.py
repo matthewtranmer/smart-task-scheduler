@@ -1,93 +1,74 @@
 import io
-from PIL import Image
+import base64
+import json
 import multiprocessing as mp
 
+import numpy as np
+from PIL import Image
 
-# Returns the coordinates of a maximum of 5x5 adjacent pixels
-def get_adjacent_pixels(x, y, width, height):
-    pixels = []
+from lib.task_definitions import TaskIDs
 
-    current_x = -2
-    current_y = -2
+def calculate_fruit_defects(json_data: bytes):
+    data_dict = json.loads(json_data)
 
-    while current_y != 3:
-        new_x = x + current_x
-        new_y = y + current_y
+    img_data_b64_bytes = data_dict[str(TaskIDs.REMOVE_BACKGROUND)].encode()
+    img_bytes = base64.decodebytes(img_data_b64_bytes)
 
-        current_x += 1
+    output_image = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+    arr = np.array(output_image, dtype=np.uint8)  # shape: (H, W, 4)
 
-        if current_x > 1:
-            current_x = -1
-            current_y += 1
+    rgb = arr[:, :, :3]
+    alpha = arr[:, :, 3]
 
-        if (current_x == 0 and current_y == 0):
-            continue
+    # Step 1: set transparent-ish background to white
+    background_mask = alpha < 100
+    background_pixels = int(background_mask.sum())
+    arr[background_mask] = [255, 255, 255, 255]
 
-        if new_x < 0 or new_x >= width:
-            continue
+    # Step 2: remove black/dark border next to white background
+    # A pixel is considered white if RGB == 255,255,255
+    rgb = arr[:, :, :3]
+    white_mask = np.all(rgb == 255, axis=2)
 
-        if new_y < 0 or new_y >= height:
-            continue
+    # Find pixels within a 5x5 neighborhood of any white pixel.
+    # This replaces the Python get_adjacent_pixels loop.
+    near_white = np.zeros_like(white_mask, dtype=bool)
 
-        pixels.append((new_x, new_y))
+    h, w = white_mask.shape
+    for dy in range(-2, 3):
+        for dx in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
 
-    return pixels
+            src_y0 = max(0, -dy)
+            src_y1 = min(h, h - dy)
+            src_x0 = max(0, -dx)
+            src_x1 = min(w, w - dx)
 
+            dst_y0 = max(0, dy)
+            dst_y1 = min(h, h + dy)
+            dst_x0 = max(0, dx)
+            dst_x1 = min(w, w + dx)
 
-def calculate_fruit_defects(img_bytes: bytes):
-    output_image = Image.open(io.BytesIO(img_bytes))
+            near_white[dst_y0:dst_y1, dst_x0:dst_x1] |= white_mask[src_y0:src_y1, src_x0:src_x1]
 
-    output_image: Image = output_image.convert("RGBA").copy()
+    # Remove non-white pixels that are adjacent to white background
+    border_mask = near_white & (~white_mask)
+    arr[border_mask] = [255, 255, 255, 255]
 
-    pixels = output_image.load()
-    width, height = output_image.size
-    background_pixels = 0
+    # Step 3: grayscale and dark pixel count
+    # PIL grayscale uses approximately 0.299 R + 0.587 G + 0.114 B
+    rgb = arr[:, :, :3].astype(np.float32)
+    greyscale = 0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]
 
-    # Set background white
-    for y in range(height):
-        for x in range(width):
-            R, G, B, A = pixels[x, y]
-            if A < 100:
-                pixels[x, y] = 255, 255, 255, 255
-                background_pixels += 1
+    black_pixels = int((greyscale < 85).sum())
 
-    image_copy = output_image.copy().load()
-                
-    # Remove black border
-    for y in range(height):
-        for x in range(width):
-            R, G, B, A = image_copy[x, y]
-            if R == 255 and G == 255 and B == 255:
-                adjacent_pixels = get_adjacent_pixels(x, y, width, height)
-
-                for adjacent_pixel in adjacent_pixels:
-                    adjacent_x, adjacent_y = adjacent_pixel
-                    if (image_copy[adjacent_x, adjacent_y] != (255, 255, 255, 255)):
-                        pixels[adjacent_x, adjacent_y] = (255, 255, 255, 255)
-
-    # Convert image to grayscale
-    greyscale_img = output_image.convert("L")
-    greyscale_pixels = greyscale_img.load()
-
-    # Detect number of black pixels (pixels less than 130)
-    black_pixels = 0
-
-    for y in range(height):
-        for x in range(width):
-            if greyscale_pixels[x, y] < 85:
-                black_pixels += 1
-
-
-    foreground_pixels = width * height - background_pixels
-    black_pixel_ratio = black_pixels/foreground_pixels
+    foreground_pixels = (h * w) - background_pixels
+    black_pixel_ratio = black_pixels / foreground_pixels if foreground_pixels > 0 else 0.0
 
     return str(black_pixel_ratio).encode()
 
 
-def fruit_defects(img_bytes: bytes):
+def fruit_defects(json_data: bytes):
     with mp.Pool(1) as pool:
-        return pool.apply(calculate_fruit_defects, args=(img_bytes,))
-
-
-
-
+        return pool.apply(calculate_fruit_defects, args=(json_data,))

@@ -2,8 +2,16 @@ import numpy as np
 import io
 from PIL import Image
 import multiprocessing as mp
+import json, base64
+from lib.task_definitions import TaskIDs
 
-def calculate_fruit_size(img_bytes: bytes):
+
+def calculate_fruit_size(json_data: bytes):
+    data_dict = json.loads(json_data)
+
+    img_data_b64_bytes = data_dict[str(TaskIDs.REMOVE_BACKGROUND)].encode()
+    img_bytes = base64.decodebytes(img_data_b64_bytes)
+
     output_image = Image.open(io.BytesIO(img_bytes))
     output_image: Image = output_image.convert("RGBA")
     
@@ -22,6 +30,6 @@ def calculate_fruit_size(img_bytes: bytes):
     foreground_background_ratio = foreground_pixels / background_pixels
     return str(foreground_background_ratio).encode()
 
-def fruit_size(img_bytes: bytes):
+def fruit_size(json_data: bytes):
     with mp.Pool(1) as pool:
-        return pool.apply(calculate_fruit_size, args=(img_bytes,))
+        return pool.apply(calculate_fruit_size, args=(json_data,))

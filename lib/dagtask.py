@@ -25,16 +25,20 @@ class DAGNode():
 # TODO: Make threadsafe
 # Need to have client socket to respond
 class TaskDependencyGraph():
-    task_id: int
-    nodes: list[DAGNode] = []
-    dependency_list: dict[int, list[int]] = {0: []}
-    completed_nodes = 0
+    START_NODE_ID = 0
+    END_NODE_ID = -1
     
-    result_storage: dict[int, bytes] = {}
-
     def __init__(self, deadline_s: float):
         self.deadline_s = deadline_s
         self.deadline_ms = deadline_s * 1000
+
+        self.task_id: int
+        self.nodes: list[DAGNode] = []
+        self.dependency_list: dict[int, list[int]] = {0: []}
+        self.completed_nodes = 0
+
+        self.result_storage: dict[int, bytes] = {}
+
 
     def add_node(self, node: DAGNode):
         self.nodes.append(node)
@@ -97,9 +101,6 @@ class TaskDependencyGraph():
             if self.START_NODE_ID in dependencies and len(dependencies) == 1:
                 start_nodes.append(node)
 
-        print(f"start nodes: {start_nodes}")
-        print(f"end nodes: {end_nodes}")
-
         paths = []
 
         for start in start_nodes:
@@ -129,13 +130,18 @@ class TaskDependencyGraph():
                 node = self.get_node(node_id)
                 path_weight += node.task.cycles_required
             
+            # print(f"Path: {path}, weight: {path_weight}")
+
             # Assign deadlines
             for node_id in path:
                 node = self.get_node(node_id)
-                
-                node_deadline_ms = (node.task.cycles_required / path_weight) * self.deadline_ms
-                if node_deadline_ms < node.task.deadline_ms:
+
+                node_deadline_ms = int((float(node.task.cycles_required) / float(path_weight)) * self.deadline_ms)
+                if node_deadline_ms < node.task.deadline_ms or node.task.deadline_ms == 0:
                     node.task.deadline_ms = node_deadline_ms
+
+        for node in self.nodes:
+            print(f"Assigned deadline {node.task.deadline_ms}ms to taskID {node.task.taskID}")
 
     #  Return a manifest of the start tasks and the node ids
     def get_start_tasks(self, input_data: bytes) -> tuple[list[edge_pb2.Task], list[int]]:
@@ -164,10 +170,13 @@ class TaskDependencyGraph():
     # Returns True when the DAG task is complete
     # Sets self.final_result when completed
     def update_state(self, completed_node_id: int, result: bytes) -> tuple[list[edge_pb2.Task], list[int], bool]:
+        # Store task result
         self.result_storage[completed_node_id] = result
+
         self.get_node(completed_node_id).completed = True
         self.completed_nodes += 1
 
+        # If all nodes have completed - return
         if self.completed_nodes >= len(self.nodes):
             self.final_result = result
             return [], [], True
@@ -183,7 +192,7 @@ class TaskDependencyGraph():
 
         executable_nodes: list[DAGNode] = []
 
-        # Test if dependent nodes now have waiting dependecies
+        # Find nodes that can now execute
         for node_id in dependent_nodes:
             can_execute = True
 
@@ -199,18 +208,22 @@ class TaskDependencyGraph():
             if can_execute:
                 executable_nodes.append(self.get_node(node_id))
 
+        # Create task manifests with the correct inputs from the storage
         tasks = []
         nodes = []
         for node in executable_nodes:
-            # Get input from dependent nodes - labeled by task id
+            # Get inputs from dependent nodes - labeled by task id
             input_list = {}
             dependent_nodes = self.dependency_list[node.node_id]
 
             for dependent_node_id in dependent_nodes:
                 dependent_task_id = self.get_node(dependent_node_id).task_id
 
-                print(f"New input detected: {self.result_storage[dependent_node_id]}")
-                input_list[dependent_task_id] = self.result_storage[dependent_node_id].decode()
+                print(f"New input detected: {self.result_storage[dependent_node_id][:40]}")
+
+                # Encode outputs from tasks as base 64 strings encodeable by JSON
+                data_b64_str = base64.encodebytes(self.result_storage[dependent_node_id]).decode()
+                input_list[dependent_task_id] = data_b64_str
 
             node.task.input = json.dumps(input_list).encode()
 

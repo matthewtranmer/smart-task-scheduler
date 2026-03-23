@@ -38,8 +38,21 @@ def remove_bg(image_bytes: bytes) -> Image:
 
     import_time = t1 - t0
 
+    so = ort.SessionOptions()
+    so.intra_op_num_threads = 1
+    so.inter_op_num_threads = 1
+    so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+    so.enable_cpu_mem_arena = False
+    so.enable_mem_pattern = False
+    so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+
     t0 = time.perf_counter()
-    session = ort.InferenceSession("/app/src/tasks/remove_background/.u2net/u2netp.onnx")
+    session = ort.InferenceSession(
+        "/app/src/tasks/remove_background/.u2net/u2netp.onnx",
+        sess_options=so,
+        providers=["CPUExecutionProvider"]
+    )
     t1 = time.perf_counter()
 
     model_load_time = t1 - t0

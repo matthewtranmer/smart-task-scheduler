@@ -1,4 +1,4 @@
-import json
+import json, base64
 from lib.task_definitions import TaskIDs
 
 def fruit_quality_aggregation(json_data: bytes) -> bytes:
@@ -9,11 +9,11 @@ def fruit_quality_aggregation(json_data: bytes) -> bytes:
     DEFECTS_WEIGHT = 0.3
  
     if str(TaskIDs.BANANA_QUALITY_RIPENESS) in data_dict:
-        ripeness_str = data_dict[str(TaskIDs.BANANA_QUALITY_RIPENESS)]
+        ripeness_data = data_dict[str(TaskIDs.BANANA_QUALITY_RIPENESS)]
     elif str(TaskIDs.ORANGE_QUALITY_RIPENESS) in data_dict:
-        ripeness_str = data_dict[str(TaskIDs.ORANGE_QUALITY_RIPENESS)]
+        ripeness_data = data_dict[str(TaskIDs.ORANGE_QUALITY_RIPENESS)]
 
-    # raise Exception(f"ripeness_str: {ripeness_str}")
+    ripeness_str = base64.decodebytes(ripeness_data.encode()).decode()
 
     match ripeness_str:
         case "rotten":
@@ -23,10 +23,10 @@ def fruit_quality_aggregation(json_data: bytes) -> bytes:
         case "fresh":
             ripeness = 1
     
-    size = float(data_dict[str(TaskIDs.FRUIT_SIZE)])
-    defects = float(data_dict[str(TaskIDs.FRUIT_DEFECTS)]) 
+    size = float(base64.decodebytes(data_dict[str(TaskIDs.FRUIT_SIZE)].encode()).decode())
+    defects = float(base64.decodebytes(data_dict[str(TaskIDs.FRUIT_DEFECTS)].encode()).decode())
 
     # Test result - simply add together
     # TODO: implement properly
-    result = ripeness + size + defects
-    return str(result).encode()
+    test = f"ripeness: {ripeness}, size: {size}, defects: {defects}"
+    return str(test).encode()

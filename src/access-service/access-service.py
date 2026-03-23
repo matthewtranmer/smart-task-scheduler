@@ -15,7 +15,8 @@ class TaskInformation:
 
 
 class PriorityTaskQueue:
-    queue: list[TaskInformation] = []
+    def __init__(self):
+        self.queue: list[TaskInformation] = []
 
     # Insert tasks into the queue based on their deadline
     def add_task(self, new_task: TaskInformation):
@@ -44,8 +45,6 @@ class PriorityTaskQueue:
     
 class EdgeAccess:
     heartbeat_timeout_s = 8
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    task_queue = PriorityTaskQueue()
 
     def __init__(
             self, 
@@ -57,6 +56,9 @@ class EdgeAccess:
             ip=None, 
             port=2004
         ):
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.task_queue = PriorityTaskQueue()
+
         self.scheduler = scheduler
         self.queue_wait_time_s = queue_wait_time_s
         self.priority_task_threshold_s = priority_task_threshold_s
@@ -77,7 +79,7 @@ class EdgeAccess:
     def serve(self, timeout=2):
         # Init periodic function
         self.removeDeadClients()
-        self.run_tasks()
+        self.flush_task_queue_and_execute()
 
         self.logger.info(f"Starting access server on address {self.ip}:{self.port}")
 
@@ -100,11 +102,16 @@ class EdgeAccess:
     # not removed on the next pass.
     # Reinvoked asynchronously every heartbeat_timeout_s
     def removeDeadClients(self):
-        self.scheduler.removeDeadNodes()
+        dead_nodes = self.scheduler.removeDeadNodes()
+
+        if len(dead_nodes) > 0:
+            self.logger.warning(f"Removed dead nodes: {dead_nodes}")
+
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
-    # Method that takes the task request from the client and queues it
+    # Method that takes the incoming task request from the client.
+    # It either queues it or sends it for execution staight away.
     def handle_task(self, incoming_request, client_socket):
         _, raw_payload = incoming_request
 
@@ -112,6 +119,8 @@ class EdgeAccess:
         task = edge_pb2.Task()
         task.ParseFromString(raw_payload)
         task.inputID = random.randint(1000000000, 2147483640)
+
+        self.logger.debug(f"Received task with taskID: {task.taskID} from client")
 
         # Populate task resource parameters if not a parallel task
         if task.taskID not in dependency_graph_definitions.parallel_task_IDs:
@@ -121,43 +130,30 @@ class EdgeAccess:
             task.cycles_required = parameters.cycles
             task.memory_requirement_mb = parameters.memory_mb
 
+        task_info = TaskInformation(task, client_socket)
+
         # If task deadline greater than threshold, add task to queue
         if (task.deadline_ms / 1000 > self.priority_task_threshold_s):
-            self.task_queue.add_task(TaskInformation(task, client_socket))
+            self.logger.debug("Adding task to queue")
+            self.task_queue.add_task(task_info)
         else:
             self.logger.info("Priority task detected, fast tracking scheduling...")
-            threading.Thread(target=self.execute_normal_task, args=(task, client_socket)).start()
+            self.execute_task()
+            threading.Thread(target=self.execute_normal_task, args=(task_info, )).start()
 
     # Called every queue_wait_time_s seconds
     # Flushes the task queue; sceduling each task
-    def run_tasks(self):
+    def flush_task_queue_and_execute(self):
         queue: list[TaskInformation] = self.task_queue.flush_queue()
 
         for task_info in queue:
-            # Test to see if task is a DAG task
-            if task_info.task.taskID in dependency_graph_definitions.dag_tasks:
-
-                task_graph_class: type[dagtask.TaskDependencyGraph] = dependency_graph_definitions.get_dag_task_implementation(task_info.task.taskID)
-                task_graph: dagtask.TaskDependencyGraph = task_graph_class(
-                    deadline_s=task_info.task.deadline_ms / 1000 # Convert to seconds
-                )
-
-                # Get the inital tasks from the DAG that have no dependencies
-                start_tasks, nodes = task_graph.get_start_tasks(task_info.task.input)
-
-                assert len(start_tasks) == len(nodes)
-
-                # Execute each task
-                for i in range(len(start_tasks)):
-                    threading.Thread(target=self.execute_sub_task, args=(start_tasks[i], task_graph, task_info.client_socket, nodes[i])).start()
-
-            # Normal task
-            else:
-                threading.Thread(target=self.execute_normal_task, args=(task_info.task, task_info.client_socket)).start()
+            self.logger.debug(f"Flushing taskID: {task_info.task.taskID} from the queue")
+            self.execute_task(task_info)
 
         # Recall function after delay
-        threading.Timer(self.queue_wait_time_s, self.run_tasks).start()
+        threading.Timer(self.queue_wait_time_s, self.flush_task_queue_and_execute).start()
 
+    # Method that sends a task to an edge node and handles any errors
     def handle_task_offload(self, task: edge_pb2.Task) -> tuple[bytes, bool]:
         self.logger.info(f"Executing task with ID {task.taskID} and deadline {task.deadline_ms}")
 
@@ -173,6 +169,33 @@ class EdgeAccess:
 
         return response, success
 
+    # Executes a task from task information, deciding wether it is a sub task or normal task.
+    def execute_task(self, task_info: TaskInformation):
+        # Test to see if task is a DAG task
+        if task_info.task.taskID in dependency_graph_definitions.dag_tasks:
+
+            task_graph_class: type[dagtask.TaskDependencyGraph] = dependency_graph_definitions.get_dag_task_implementation(task_info.task.taskID)
+            
+            task_graph: dagtask.TaskDependencyGraph = task_graph_class(
+                deadline_s=task_info.task.deadline_ms / 1000 # Convert to seconds
+            )
+
+            # Get the inital tasks from the DAG that have no dependencies
+            start_tasks, nodes = task_graph.get_start_tasks(task_info.task.input)
+            self.logger.debug(f"Start tasks length: {len(start_tasks)}")
+
+            assert len(start_tasks) == len(nodes)
+
+            # Execute each task
+            for i in range(len(start_tasks)):
+                threading.Thread(target=self.execute_sub_task, args=(start_tasks[i], task_graph, task_info.client_socket, nodes[i])).start()
+
+        # Normal task
+        else:
+            threading.Thread(target=self.execute_normal_task, args=(task_info.task, task_info.client_socket)).start()
+
+
+    # Method that handles execution of tasks within a DAG task
     def execute_sub_task(
             self, 
             task: edge_pb2.Task,
@@ -181,7 +204,7 @@ class EdgeAccess:
             graph_node_ID: int
             ):
         
-        print(f"Executing subtask with ID {task.taskID} and input {task.input[:50]}")
+        print(f"Executing subtask with ID {task.taskID}, deadline {task.deadline_ms} and input {task.input[:50]}")
 
         # Execute task
         raw_response, success = self.handle_task_offload(task)
@@ -216,7 +239,7 @@ class EdgeAccess:
         for i in range(len(new_tasks)):
             threading.Thread(target=self.execute_sub_task, args=(new_tasks[i], task_graph, client_socket, new_task_nodes[i])).start()
 
-
+    # Method that handles execution of tasks within a DAG task
     # Executed in separate threads
     def execute_normal_task(self, task: edge_pb2.Task, client_socket: socket.socket):
         # Offload task to compute
@@ -227,6 +250,8 @@ class EdgeAccess:
         net.send(client_socket, header, response)
 
 
+    # Method that schedules an edge node or a cloud node and then
+    # sends the task to the scheduled node.
     def send_to_node(self, task, edge_timeout=5) -> bytes:
         # Attempt to make a connection to a node at most 3 times
         for _ in range(3):
@@ -400,9 +425,9 @@ def main():
     )
     
     diagnostics = Diagnostics(
-        measurement_interval_s=5,
+        measurement_interval_s=20,
         scheduler=scheduler, 
-        display=True
+        display=False
     )
 
     access_server = EdgeAccess(

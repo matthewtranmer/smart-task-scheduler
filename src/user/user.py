@@ -9,8 +9,14 @@ def main(address):
         with open("src/user/test_data/orange.png", "rb") as f:
             image_bytes = f.read()
 
-        response = offloader.fruit_size(image_bytes, 2000)
+        # response = offloader.orange_quality_rating(image_bytes, 6000)
+
+        t0 = time.perf_counter()
+        response = offloader.banana_quality_rating(image_bytes, 6000)
+        t1 = time.perf_counter()
+
         print(f"Got response: {response}")
+        print(f"Execution time: {t1 - t0}")
 
         return
 

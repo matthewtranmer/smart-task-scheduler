@@ -36,9 +36,11 @@ class ScheduledNode:
         self.memory_mb = memory_mb
 
 class Scheduler:
-    index = 0
-    nodes = []
-    next_id = 0
+    def __init__(self):
+        self.index = 0
+        self.nodes = []
+        self.next_id = 0
+    
 
     def schedule(self) -> ScheduledNode:
         raise NotImplementedError
@@ -223,6 +225,7 @@ class RoundRobinWithAllocation(Scheduler):
 
 class RoundRobinEdgeCloud(RoundRobinWithAllocation):
     def __init__(self, cloud_address):
+        super().__init__()
         self.cloud_address = cloud_address
 
     def schedule(self, memory_mb):
@@ -253,6 +256,8 @@ class SchedulerV1(Scheduler):
             load_factor_usage_threshold: float, # Threshold when tasks are preemptively scheduled to the cloud 
             omega: float # Resource priority when calculating each node's score  
         ):
+        super().__init__()
+
         self.logger: logging.Logger = logger
         self.cloud_address: tuple[str, int] = cloud_address
         self.cloud_clock_speed_cps: int = cloud_clock_speed_cps

@@ -60,7 +60,7 @@ parallel_task_IDs = [
 
 # Maps task ID to dependency graph
 dag_tasks: dict[int, d.TaskDependencyGraph] = {
-    TaskIDs.BANANA_QUALITY_RATING : BananaQualityRating,
+    TaskIDs.BANANA_QUALITY_RATING: BananaQualityRating,
     TaskIDs.ORANGE_QUALITY_RATING: OrangeQualityRating,
 }
 
