@@ -1,45 +1,66 @@
-print("First line")
-
-# while (True): pass
-
 import sys, json, traceback, time
 from src import task
 from lib import edge_pb2
 import base64
+from lib.task_definitions import TaskIDs
+import os, gzip
 
-print("Finished imports")
+tasks = [
+    # TaskIDs.DETECT_HUMAN, # Mean: 0.18377762045010967s, Cycles: 624843909.5303729, Mem: 68.23828125
+    # TaskIDs.CLASSIFY_FRUIT, # Mean: 0.08720556775006116s, Cycles: 296498930.350208, Mem: 66.640625
+    # TaskIDs.FRUIT_QUALITY, # Mean: 0.038632850350404625s, Cycles: 131351691.19137573, Mem: 61.00390625
+    # TaskIDs.BANANA_QUALITY_RIPENESS, # Mean: 0.1347612450998895s, Cycles: 458188233.3396243, Mem: 110.75
+    # TaskIDs.ORANGE_QUALITY_RIPENESS, # Mean: 0.13514786374980758s, Cycles: 459502736.7493458, Mem: 111.1015625
+    # TaskIDs.OBJECT_COUNT, # Mean: 0.02359029479994206s, Cycles: 80207002.319803, Mem: 47.2421875
+    # TaskIDs.REMOVE_BACKGROUND, # Mean: 0.5884024289000991s, Cycles: 2000568258.2603369, Mem: 316.27734375
 
-# def read_data() -> bytes:
-#     length_bytes = sys.stdin.buffer.read(4)
-#     buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
+    # TaskIDs.FRUIT_SIZE, # Mean: 0.05350165330009986s, Cycles: 181905621.2203395, Mem: 53.859375
+    # TaskIDs.FRUIT_DEFECTS, #Mean: 0.04016624710011456s, Cycles: 136565240.1403895, Mem: 64.06640625
+    # TaskIDs.FRUIT_QUALITY_AGGREGATION, # Mean: 1.1816999995062361e-05s, Cycles: 40177.799983212026, Mem: 38.17578125
 
-#     received_data = b""
-#     while len(received_data) < buffer_length:
-#         received_data += sys.stdin.buffer.read(buffer_length - len(received_data))
+    # TaskIDs.COMPRESSION,
+    TaskIDs.DECOMPRESSION,
+    # TaskIDs.ENCRYPTION, # Mean: 0.001985000249987934s, Cycles: 6749000.849958975, Mem: 41.7578125
+    # TaskIDs.DECRYPTION,
+]
 
-#     return received_data
+CLOCK = 3_400_000_000
 
-# def write_data(data: bytes):
-#     sys.stdout.buffer.write(len(data).to_bytes(4, byteorder="big", signed=False) + data)
-#     sys.stdout.buffer.flush()
+
+# time = cycles/clock
+# cycles = time * clock
 
 def main():
-    print("Started!")
-    with open("/app/orange.png", "rb") as f:
-        image_bytes = f.read()
+    compressed = b'\x1f\x8b\x08\x00\x92\xb4\xc2i\x02\xff\xed\xc1\x81\x00\x00\x00\x00\xc3 \xd6\xf9K\xdc\xe0\x04U\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00|\x03cL\xd3\xf8\x00\x00\x08\x00'
 
-    REMOVE_BACKGROUND = 13
+    # text = "a" * int((1024 * 1024)/2) # 512KiB
+    # text = text.encode()
 
-    print("Starting background removal")
+    for taskID in tasks:
+        times = []
 
-    t0 = time.perf_counter()
-    task.run_task(REMOVE_BACKGROUND, image_bytes)
-    t1 = time.perf_counter()
+        for i in range(20):
+            t0 = time.perf_counter()
 
-    print(f"Background removal finished. Execution: {t1 - t0}")
+            # response = task.run_task(TaskIDs.COMPRESSION, text)
+
+            response = task.run_task(TaskIDs.DECOMPRESSION, compressed)
+
+            t1 = time.perf_counter()
+            times.append(t1 - t0)
+
+        print(len(response))
+
+        mean = sum(times)/len(times)
+        maximum = round(max(times), 2)
+        minimum = round(min(times), 2)
+
+        cycles = mean * CLOCK
+
+        print(f"Task ID {taskID}, Max: {maximum}s, Min: {minimum}s, Mean: {mean}s, Cycles: {cycles}")
+
 
     time.sleep(1000000)
-
 
 if __name__ == "__main__":
     main()

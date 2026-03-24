@@ -1,6 +1,9 @@
-container_id = "beec99c80bdd6a810992f0a7b8b2d969859ac736682903b947a494f3953fb5ec"
+import sys
 
-with open(f"/sys/fs/cgroup/system.slice/docker-{container_id}.scope/memory.peak", "r") as f:
+first_arg = sys.argv[1]
+print(first_arg)
+
+with open(f"/sys/fs/cgroup/system.slice/docker-{first_arg}.scope/memory.peak", "r") as f:
     peak_bytes = int(f.read())
 
 peak_mib = peak_bytes / 1024 / 1024

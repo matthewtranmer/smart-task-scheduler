@@ -31,5 +31,6 @@ COPY lib/edge_pb2.py /app/lib/edge_pb2.py
 COPY lib/task_definitions.py /app/lib/task_definitions.py
 
 COPY docker/images/test_sandbox/orange.png /app/orange.png
+COPY docker/images/test_sandbox /app/
 
 ENTRYPOINT [ "python3", "-u", "main.py" ]

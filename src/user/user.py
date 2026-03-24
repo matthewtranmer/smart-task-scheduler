@@ -6,16 +6,28 @@ def main(address):
     try:
         offloader = taskoffloader.TaskOffloader(address)
 
-        with open("src/user/test_data/orange.png", "rb") as f:
-            image_bytes = f.read()
+        # with open("src/user/test_data/orange.png", "rb") as f:
+        #     image_bytes = f.read()
 
         # response = offloader.orange_quality_rating(image_bytes, 6000)
 
+
+        key = os.urandom(32)
+
         t0 = time.perf_counter()
-        response = offloader.banana_quality_rating(image_bytes, 6000)
+        response = offloader.compress(b"Hello!", 400)
         t1 = time.perf_counter()
 
-        print(f"Got response: {response}")
+        print(f"Got encrypted response: {response.value}")
+        print(f"Execution time: {t1 - t0}")
+
+
+
+        t0 = time.perf_counter()
+        response = offloader.decompress(response.value, 250)
+        t1 = time.perf_counter()
+
+        print(f"Got decrypted response: {response.value}")
         print(f"Execution time: {t1 - t0}")
 
         return

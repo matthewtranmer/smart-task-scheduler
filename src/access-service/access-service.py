@@ -4,6 +4,7 @@ from lib import dependency_graph_definitions, edge_pb2, net, dagtask, task_defin
 from lib import scheduler as s
 from diagnostics import Diagnostics
 from dataclasses import dataclass
+import datetime
 
 @dataclass
 class TaskInformation:
@@ -12,6 +13,8 @@ class TaskInformation:
 
     # Where the response needs to be sent
     client_socket: socket.socket
+
+    queue_entrance_time: datetime.datetime
 
 
 class PriorityTaskQueue:
@@ -30,12 +33,16 @@ class PriorityTaskQueue:
     def flush_queue(self):
         new_queue: list[TaskInformation] = []
 
+        flush_time = datetime.datetime.now()
+
         # Create a new queue with the task information from this time step
         for task in self.queue:
             new_queue.append(task)
 
-        # Remove the items from the global queue that have been added to the 
-        # new queue.
+            # Subtract the time the task spent in the queue from the deadline
+            task.task.deadline_ms -= (flush_time - task.queue_entrance_time).seconds * 1000
+
+        # Remove the items from the global queue that have been added to the new queue.
         # Done this way for thread safety 
         for task in new_queue:
             self.queue.remove(task)
@@ -50,7 +57,6 @@ class EdgeAccess:
             self, 
             scheduler: s.Scheduler, 
             queue_wait_time_s: int, 
-            priority_task_threshold_s: int,
             logger: logging.Logger, 
             diagnostics, 
             ip=None, 
@@ -61,7 +67,6 @@ class EdgeAccess:
 
         self.scheduler = scheduler
         self.queue_wait_time_s = queue_wait_time_s
-        self.priority_task_threshold_s = priority_task_threshold_s
         self.logger = logger
         self.diagnostics = diagnostics
         self.port = port
@@ -130,16 +135,29 @@ class EdgeAccess:
             task.cycles_required = parameters.cycles
             task.memory_requirement_mb = parameters.memory_mb
 
-        task_info = TaskInformation(task, client_socket)
+        task_info = TaskInformation(
+            task=task, 
+            client_socket=client_socket, 
+            queue_entrance_time=datetime.datetime.now()
+        )
 
-        # If task deadline greater than threshold, add task to queue
-        if (task.deadline_ms / 1000 > self.priority_task_threshold_s):
-            self.logger.debug("Adding task to queue")
-            self.task_queue.add_task(task_info)
-        else:
+        # Calculate the maximum possible execution time for this task
+        maximum_execution_time = self.scheduler.calculate_processing_time(
+            clock_speed=self.scheduler.get_min_clock_speed(), 
+            cycles_required=task.cycles_required
+        )
+
+        effective_execution_time_ms = (maximum_execution_time + self.queue_wait_time_s) * 1000
+        self.logger.debug(f"maximum_execution_time: {maximum_execution_time}s, effective_execution_time_ms: {effective_execution_time_ms}ms")
+
+        # Test if the task can withstand being added to the queue
+        if effective_execution_time_ms > task.deadline_ms:
             self.logger.info("Priority task detected, fast tracking scheduling...")
-            self.execute_task()
-            threading.Thread(target=self.execute_normal_task, args=(task_info, )).start()
+            threading.Thread(target=self.execute_task, args=(task_info, )).start()
+            return
+        
+        self.logger.debug("Adding task to queue")
+        self.task_queue.add_task(task_info)
 
     # Called every queue_wait_time_s seconds
     # Flushes the task queue; sceduling each task
@@ -433,7 +451,6 @@ def main():
     access_server = EdgeAccess(
         scheduler=scheduler,
         queue_wait_time_s=0.3,
-        priority_task_threshold_s=0.45,
         logger= logger,
         diagnostics=diagnostics
     )

@@ -22,6 +22,8 @@ def fruit_quality_aggregation(json_data: bytes) -> bytes:
             ripeness = 0.5
         case "fresh":
             ripeness = 1
+        case _:
+            raise Exception("Ripeness given in incorrect format")
     
     size = float(base64.decodebytes(data_dict[str(TaskIDs.FRUIT_SIZE)].encode()).decode())
     defects = float(base64.decodebytes(data_dict[str(TaskIDs.FRUIT_DEFECTS)].encode()).decode())

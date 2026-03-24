@@ -59,15 +59,21 @@ class TaskOffloader:
     def encrypt(self, key: bytes, plaintext: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
         task.taskID = TaskIDs.ENCRYPTION
-        task.input = data
+        task.input = json.dumps({
+            "key": base64.encodebytes(key).decode(),
+            "plaintext": plaintext.decode(), 
+        }).encode()
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)
     
     def decrypt(self, key: bytes, ciphertext: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
-        task.taskID = TaskIDs.ENCRYPTION
-        task.input = data
+        task.taskID = TaskIDs.DECRYPTION
+        task.input = json.dumps({
+            "key": base64.encodebytes(key).decode(),
+            "ciphertext": ciphertext.decode(), 
+        }).encode()
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)

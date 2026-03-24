@@ -45,16 +45,15 @@ class Scheduler:
     def schedule(self) -> ScheduledNode:
         raise NotImplementedError
     
-    # Calculates the mean clock speed between the edge nodes
-    def calculate_average_clock_speed(self) -> int:
-        total = 0
-        count = 0
+    # Calculates the minumum clock speed between the edge nodes
+    def get_min_clock_speed(self) -> int:
+        minimum = 0
 
         for node in self.nodes:
-            total += node["clock_speed"]
-            count += 1
+            if node["clock_speed"] < minimum or minimum == 0:
+                minimum = node["clock_speed"]
 
-        return int(total / count)
+        return minimum
     
     def calculate_processing_time(self, clock_speed, cycles_required):
         return cycles_required / clock_speed

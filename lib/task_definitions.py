@@ -32,19 +32,19 @@ class TaskIDs():
     DIVISION = 10003
 
 task_parameters: dict[int, TaskParameters] = {
-    TaskIDs.DETECT_HUMAN: TaskParameters(cycles=632400000, memory_mb=100),
-    TaskIDs.CLASSIFY_FRUIT: TaskParameters(cycles=309400000, memory_mb=300),
-    TaskIDs.FRUIT_QUALITY: TaskParameters(cycles=129200000, memory_mb=600),
-    TaskIDs.COMPRESSION: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.DECOMPRESSION: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.ENCRYPTION: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.DECRYPTION: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.BANANA_QUALITY_RIPENESS: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.ORANGE_QUALITY_RIPENESS: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.FRUIT_SIZE: TaskParameters(cycles=929200000, memory_mb=100),
-    TaskIDs.FRUIT_DEFECTS: TaskParameters(cycles=929200000, memory_mb=100),
-    TaskIDs.FRUIT_QUALITY_AGGREGATION: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.OBJECT_COUNT: TaskParameters(cycles=129200000, memory_mb=100),
-    TaskIDs.REMOVE_BACKGROUND: TaskParameters(cycles=229200000, memory_mb=100),
+    TaskIDs.DETECT_HUMAN: TaskParameters(cycles=624843909, memory_mb=68),
+    TaskIDs.CLASSIFY_FRUIT: TaskParameters(cycles=296498930, memory_mb=66),
+    TaskIDs.FRUIT_QUALITY: TaskParameters(cycles=131351691, memory_mb=61),
+    TaskIDs.COMPRESSION: TaskParameters(cycles=5173250, memory_mb=38),
+    TaskIDs.DECOMPRESSION: TaskParameters(cycles=2697808, memory_mb=38),
+    TaskIDs.ENCRYPTION: TaskParameters(cycles=6842475, memory_mb=41),
+    TaskIDs.DECRYPTION: TaskParameters(cycles=8199410, memory_mb=42),
+    TaskIDs.BANANA_QUALITY_RIPENESS: TaskParameters(cycles=458188233, memory_mb=110),
+    TaskIDs.ORANGE_QUALITY_RIPENESS: TaskParameters(cycles=459502736, memory_mb=111),
+    TaskIDs.FRUIT_SIZE: TaskParameters(cycles=181905621, memory_mb=53),
+    TaskIDs.FRUIT_DEFECTS: TaskParameters(cycles=136565240, memory_mb=64),
+    TaskIDs.FRUIT_QUALITY_AGGREGATION: TaskParameters(cycles=40177, memory_mb=38),
+    TaskIDs.OBJECT_COUNT: TaskParameters(cycles=80207002, memory_mb=47),
+    TaskIDs.REMOVE_BACKGROUND: TaskParameters(cycles=2000568258, memory_mb=316),
 }
 

@@ -1,0 +1,40 @@
+SUBTASKS
+    TaskIDs.FRUIT_SIZE
+        json.dumps({TaskIDs.REMOVE_BACKGROUND: base64.encodebytes(image_bytes).decode()}).encode()
+
+    TaskIDs.FRUIT_DEFECTS
+        json.dumps({TaskIDs.REMOVE_BACKGROUND: base64.encodebytes(image_bytes).decode()}).encode()
+
+    TaskIDs.FRUIT_QUALITY_AGGREGATION
+        json.dumps({
+            TaskIDs.BANANA_QUALITY_RIPENESS: base64.encodebytes(b"fresh").decode(), 
+            TaskIDs.FRUIT_DEFECTS: base64.encodebytes(b"10").decode(), 
+            TaskIDs.FRUIT_SIZE: base64.encodebytes(b"10").decode(), 
+        }).encode()
+
+IMAGE INPUTS
+    TaskIDs.DETECT_HUMAN - image input as raw bytes
+    TaskIDs.CLASSIFY_FRUIT - image input as raw bytes
+    TaskIDs.FRUIT_QUALITY - image input as raw bytes
+    TaskIDs.BANANA_QUALITY_RIPENESS - image input as raw bytes
+    TaskIDs.ORANGE_QUALITY_RIPENESS - image input as raw bytes
+    TaskIDs.OBJECT_COUNT - image input as raw bytes
+    TaskIDs.REMOVE_BACKGROUND - image input as raw bytes
+
+OTHER
+    TaskIDs.COMPRESSION - string encoded in bytes
+    TaskIDs.DECOMPRESSION - compressed data in bytes
+
+    512KiB
+    TaskIDs.ENCRYPTION
+        json.dumps({ 
+            "key": base64.encodebytes(key).decode(),
+            "plaintext": text,
+        }).encode()
+
+    701KiB
+    TaskIDs.DECRYPTION
+        json.dumps({ 
+            "key": base64.encodebytes(key).decode(),
+            "ciphertext": ciphertext.decode(),
+        }).encode()
