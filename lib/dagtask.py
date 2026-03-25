@@ -1,4 +1,4 @@
-import random, json, base64
+import random, json, base64, math
 from lib import edge_pb2, task_definitions
 from collections import deque
 
@@ -34,11 +34,12 @@ class TaskDependencyGraph():
 
         self.task_id: int
         self.nodes: list[DAGNode] = []
+        
         self.dependency_list: dict[int, list[int]] = {0: []}
-        self.completed_nodes = 0
-
         self.result_storage: dict[int, bytes] = {}
-
+        
+        self.completed_nodes = 0
+        self.task_canceled = False
 
     def add_node(self, node: DAGNode):
         self.nodes.append(node)
@@ -136,7 +137,7 @@ class TaskDependencyGraph():
             for node_id in path:
                 node = self.get_node(node_id)
 
-                node_deadline_ms = int((float(node.task.cycles_required) / float(path_weight)) * self.deadline_ms)
+                node_deadline_ms = math.ceil((float(node.task.cycles_required) / float(path_weight)) * self.deadline_ms)
                 if node_deadline_ms < node.task.deadline_ms or node.task.deadline_ms == 0:
                     node.task.deadline_ms = node_deadline_ms
 
@@ -163,6 +164,9 @@ class TaskDependencyGraph():
             nodes.append(node.node_id)
 
         return tasks, nodes
+    
+    def cancel_task(self):
+        self.task_canceled = True
 
     # Called when a subtask has finished executing
     # Returns a list of tasks that can now be executed with their data populated
@@ -170,6 +174,9 @@ class TaskDependencyGraph():
     # Returns True when the DAG task is complete
     # Sets self.final_result when completed
     def update_state(self, completed_node_id: int, result: bytes) -> tuple[list[edge_pb2.Task], list[int], bool]:
+        if self.task_canceled:
+            return [], [], False
+
         # Store task result
         self.result_storage[completed_node_id] = result
 

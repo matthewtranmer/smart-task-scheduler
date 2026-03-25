@@ -124,7 +124,7 @@ class EdgeClient:
                 
                 try:
                     response = scheduled_container.executeTask(task)
-                    self.logger.info(f"Executed task with id {task.taskID}, processing time {response.processing_time_ms}ms")
+                    self.logger.info(f"Executed task with id {task.taskID}, processing time {response.processing_time_ms}ms, deadline {task.deadline_ms}ms")
 
                     if (response.error):
                         self.logger.warning(f"Received error while processing task with id {task.taskID}")

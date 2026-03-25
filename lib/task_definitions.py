@@ -42,8 +42,8 @@ task_parameters: dict[int, TaskParameters] = {
     TaskIDs.BANANA_QUALITY_RIPENESS: TaskParameters(cycles=458188233, memory_mb=110),
     TaskIDs.ORANGE_QUALITY_RIPENESS: TaskParameters(cycles=459502736, memory_mb=111),
     TaskIDs.FRUIT_SIZE: TaskParameters(cycles=181905621, memory_mb=53),
-    TaskIDs.FRUIT_DEFECTS: TaskParameters(cycles=136565240, memory_mb=64),
-    TaskIDs.FRUIT_QUALITY_AGGREGATION: TaskParameters(cycles=40177, memory_mb=38),
+    TaskIDs.FRUIT_DEFECTS: TaskParameters(cycles=136_565_240, memory_mb=64),
+    TaskIDs.FRUIT_QUALITY_AGGREGATION: TaskParameters(cycles=10_000_000, memory_mb=38),
     TaskIDs.OBJECT_COUNT: TaskParameters(cycles=80207002, memory_mb=47),
     TaskIDs.REMOVE_BACKGROUND: TaskParameters(cycles=2000568258, memory_mb=316),
 }

@@ -14,7 +14,12 @@ class TaskInformation:
     # Where the response needs to be sent
     client_socket: socket.socket
 
+    # Time the task entered the queue
     queue_entrance_time: datetime.datetime
+
+    # If the task is a subtask, the graph the subtask belongs to
+    task_graph: dagtask.TaskDependencyGraph
+    graph_node_id: int
 
 
 class PriorityTaskQueue:
@@ -115,6 +120,22 @@ class EdgeAccess:
 
         threading.Timer(self.heartbeat_timeout_s, self.removeDeadClients).start()
 
+    def can_add_to_queue(self, task: edge_pb2.Task) -> bool:
+        # Calculate the maximum possible execution time for this task
+        maximum_execution_time = self.scheduler.calculate_processing_time(
+            clock_speed=self.scheduler.get_min_clock_speed(), 
+            cycles_required=task.cycles_required
+        )
+
+        effective_execution_time_ms = (maximum_execution_time + self.queue_wait_time_s) * 1000
+        self.logger.debug(f"maximum_execution_time: {maximum_execution_time}s, effective_execution_time_ms: {effective_execution_time_ms}ms")
+
+        # Test if the task cannot withstand being added to the queue
+        if effective_execution_time_ms > task.deadline_ms:
+            return False
+        
+        return True
+
     # Method that takes the incoming task request from the client.
     # It either queues it or sends it for execution staight away.
     def handle_task(self, incoming_request, client_socket):
@@ -127,7 +148,10 @@ class EdgeAccess:
 
         self.logger.debug(f"Received task with taskID: {task.taskID} from client")
 
-        # Populate task resource parameters if not a parallel task
+        task_graph: dagtask.TaskDependencyGraph = None
+        start_tasks = []
+
+        # Populate task resource parameters if the task is a normal task or sub task (not a parallel task)
         if task.taskID not in dependency_graph_definitions.parallel_task_IDs:
             print(f"Task is not a parallel task")
             parameters: task_definitions.TaskParameters = task_definitions.task_parameters[task.taskID]
@@ -135,29 +159,44 @@ class EdgeAccess:
             task.cycles_required = parameters.cycles
             task.memory_requirement_mb = parameters.memory_mb
 
-        task_info = TaskInformation(
-            task=task, 
-            client_socket=client_socket, 
-            queue_entrance_time=datetime.datetime.now()
-        )
+            start_tasks.append(task)
 
-        # Calculate the maximum possible execution time for this task
-        maximum_execution_time = self.scheduler.calculate_processing_time(
-            clock_speed=self.scheduler.get_min_clock_speed(), 
-            cycles_required=task.cycles_required
-        )
+        # Task is a parallel task
+        else:
+            task_graph_class: type[dagtask.TaskDependencyGraph] = dependency_graph_definitions.get_dag_task_implementation(task.taskID)
+            
+            task_graph = task_graph_class(
+                deadline_s=task.deadline_ms / 1000 # Convert to seconds
+            )
 
-        effective_execution_time_ms = (maximum_execution_time + self.queue_wait_time_s) * 1000
-        self.logger.debug(f"maximum_execution_time: {maximum_execution_time}s, effective_execution_time_ms: {effective_execution_time_ms}ms")
+            # Get the inital tasks from the DAG that have no dependencies
+            start_tasks, nodes = task_graph.get_start_tasks(task.input)
+            self.logger.debug(f"Start tasks length: {len(start_tasks)}")
 
-        # Test if the task can withstand being added to the queue
-        if effective_execution_time_ms > task.deadline_ms:
-            self.logger.info("Priority task detected, fast tracking scheduling...")
-            threading.Thread(target=self.execute_task, args=(task_info, )).start()
-            return
+        # Execute start tasks
+        for i in range(len(start_tasks)):
+            # Get graph node ID if task is a parallel task
+            graph_node_id = None
+            if task_graph != None: graph_node_id = nodes[i]
+
+            task_info = TaskInformation(
+                task=start_tasks[i], 
+                client_socket=client_socket, 
+                queue_entrance_time=datetime.datetime.now(),
+                task_graph=task_graph,
+                graph_node_id=graph_node_id
+            )
+
+            # Test if the task can withstand being added to the queue
+            if self.can_add_to_queue(start_tasks[i]):
+                self.logger.debug("Adding task to queue")
+                self.task_queue.add_task(task_info)
+
+            else:
+                self.logger.info("Priority task detected, fast tracking scheduling!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                threading.Thread(target=self.execute_task, args=(task_info, )).start()
         
-        self.logger.debug("Adding task to queue")
-        self.task_queue.add_task(task_info)
+        
 
     # Called every queue_wait_time_s seconds
     # Flushes the task queue; sceduling each task
@@ -171,97 +210,118 @@ class EdgeAccess:
         # Recall function after delay
         threading.Timer(self.queue_wait_time_s, self.flush_task_queue_and_execute).start()
 
-    # Method that sends a task to an edge node and handles any errors
-    def handle_task_offload(self, task: edge_pb2.Task) -> tuple[bytes, bool]:
+    # Method that sends a task to an edge node and handles any errors.
+    # Returns the response, if it was successful, and the processing time in ms
+    def handle_task_offload(self, task: edge_pb2.Task) -> tuple[bytes, bool, float]:
         self.logger.info(f"Executing task with ID {task.taskID} and deadline {task.deadline_ms}")
 
         success = False
+        processing_time_ms = 0
         # Send the task to a node
         try:
-            response = self.send_to_node(task)
+            response, processing_time_ms = self.send_to_node(task)
             success = True
         except s.NoNodesExeception as e:
             response = net.createResponse(False, e.message.encode(), response_code=500).SerializeToString()
         except s.TaskDroppedExeception as e:
             response = net.createResponse(False, e.message.encode(), response_code=551).SerializeToString()
 
-        return response, success
+        return response, success, processing_time_ms
 
     # Executes a task from task information, deciding wether it is a sub task or normal task.
     def execute_task(self, task_info: TaskInformation):
-        # Test to see if task is a DAG task
-        if task_info.task.taskID in dependency_graph_definitions.dag_tasks:
-
-            task_graph_class: type[dagtask.TaskDependencyGraph] = dependency_graph_definitions.get_dag_task_implementation(task_info.task.taskID)
-            
-            task_graph: dagtask.TaskDependencyGraph = task_graph_class(
-                deadline_s=task_info.task.deadline_ms / 1000 # Convert to seconds
-            )
-
-            # Get the inital tasks from the DAG that have no dependencies
-            start_tasks, nodes = task_graph.get_start_tasks(task_info.task.input)
-            self.logger.debug(f"Start tasks length: {len(start_tasks)}")
-
-            assert len(start_tasks) == len(nodes)
-
-            # Execute each task
-            for i in range(len(start_tasks)):
-                threading.Thread(target=self.execute_sub_task, args=(start_tasks[i], task_graph, task_info.client_socket, nodes[i])).start()
+        if task_info.task_graph != None:
+            threading.Thread(target=self.execute_sub_task, args=(task_info, )).start()
 
         # Normal task
         else:
-            threading.Thread(target=self.execute_normal_task, args=(task_info.task, task_info.client_socket)).start()
+            threading.Thread(target=self.execute_normal_task, args=(
+                task_info.task, 
+                task_info.client_socket
+            )).start()
 
 
     # Method that handles execution of tasks within a DAG task
-    def execute_sub_task(
-            self, 
-            task: edge_pb2.Task,
-            task_graph: dagtask.TaskDependencyGraph, 
-            client_socket: socket.socket,
-            graph_node_ID: int
-            ):
+    def execute_sub_task(self, task_info: TaskInformation):
         
-        print(f"Executing subtask with ID {task.taskID}, deadline {task.deadline_ms} and input {task.input[:50]}")
+        self.logger.debug(f"Executing subtask with ID {task_info.task.taskID}, deadline {task_info.task.deadline_ms} and input {task_info.task.input[:50]}")
 
         # Execute task
-        raw_response, success = self.handle_task_offload(task)
+        raw_response, success, processing_time_ms = self.handle_task_offload(task_info.task)
+        self.logger.debug(f"taskID: {task_info.task.taskID}, processing_time_ms: {processing_time_ms}, deadline_ms: {task_info.task.deadline_ms}")
 
+        # If one of the subtasks misses its deadline, cancel execution
+        if processing_time_ms > task_info.task.deadline_ms:
+            task_info.task_graph.cancel_task()
+
+            self.logger.info(f"TaskID: {task_info.task.taskID} has missed its deadline!")
+
+            response = net.createResponse(False, b"Task canceled as it is not on track to hit it's deadline", response_code=552).SerializeToString()
+
+            # Return the response to the remote client
+            header = net.createHeader(net.Commands.SCHEDULE_TASK)
+            net.send(task_info.client_socket, header, response)
+
+            return
+
+        # Cancel execution on subtask failure
         if not success:
-            # TODO: handle task failures    
-            raise Exception("Error in sub task")
+            task_info.task_graph.cancel_task()
+
+            # Return the response to the remote client
+            header = net.createHeader(net.Commands.SCHEDULE_TASK)
+            net.send(task_info.client_socket, header, raw_response)
+
+            return
         
-        print("Subtask executed sucessfully - now update graph state")
+        self.logger.debug("Subtask executed sucessfully - now update graph state")
         
         response = edge_pb2.Response()
         response.ParseFromString(raw_response)
 
         # Return the tasks that can now execute after the dependency completion
-        new_tasks, new_task_nodes, finished = task_graph.update_state(
-            completed_node_id=graph_node_ID,
+        new_tasks, new_task_nodes, finished = task_info.task_graph.update_state(
+            completed_node_id=task_info.graph_node_id,
             result=response.value
         )
 
         if finished:
-            final_result = task_graph.final_result
-            print(f"RECEIVED FINAL RESULT: {final_result}")
+            final_result = task_info.task_graph.final_result
+            self.logger.debug(f"RECEIVED FINAL RESULT: {final_result}")
 
             response = net.createResponse(True, final_result, response_code=200).SerializeToString()
 
             # Return the response to the remote client
             header = net.createHeader(net.Commands.SCHEDULE_TASK)
-            net.send(client_socket, header, response)
+            net.send(task_info.client_socket, header, response)
 
         # Ensure the two returned lists are the same length
         assert len(new_tasks) == len(new_task_nodes)
+
+        # Execute the new tasks
         for i in range(len(new_tasks)):
-            threading.Thread(target=self.execute_sub_task, args=(new_tasks[i], task_graph, client_socket, new_task_nodes[i])).start()
+            new_task_info = TaskInformation(
+                task=new_tasks[i], 
+                client_socket=task_info.client_socket, 
+                queue_entrance_time=datetime.datetime.now(),
+                task_graph=task_info.task_graph,
+                graph_node_id=new_task_nodes[i]
+            )
+
+            # Test if the task can withstand being added to the queue
+            if self.can_add_to_queue(new_tasks[i]):
+                self.logger.debug("Adding task to queue")
+                self.task_queue.add_task(new_task_info)
+
+            else:
+                self.logger.info("Priority task detected, fast tracking scheduling!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                threading.Thread(target=self.execute_sub_task, args=(new_task_info, )).start()
 
     # Method that handles execution of tasks within a DAG task
     # Executed in separate threads
     def execute_normal_task(self, task: edge_pb2.Task, client_socket: socket.socket):
         # Offload task to compute
-        response, _ = self.handle_task_offload(task)
+        response, _, _ = self.handle_task_offload(task)
 
         # Return the response to the remote client
         header = net.createHeader(net.Commands.SCHEDULE_TASK)
@@ -270,7 +330,8 @@ class EdgeAccess:
 
     # Method that schedules an edge node or a cloud node and then
     # sends the task to the scheduled node.
-    def send_to_node(self, task, edge_timeout=5) -> bytes:
+    # Returns the response from the node, and the processing time in ms
+    def send_to_node(self, task, edge_timeout=5) -> tuple[bytes, float]:
         # Attempt to make a connection to a node at most 3 times
         for _ in range(3):
             # Schedule either an edge or cloud node.
@@ -279,9 +340,9 @@ class EdgeAccess:
                 task.cycles_required,
                 task.memory_requirement_mb
             )
-            
-            # Try to connect to remote node
+        
             try:
+                # Try to connect to remote node
                 remote_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 remote_connection.settimeout(2)
                 remote_connection.connect(scheduled_node.address)
@@ -335,18 +396,18 @@ class EdgeAccess:
                 end = time.perf_counter()
 
                 # Calculate the processing time in ms
-                processing_time = (end - start) * 1000
+                processing_time_ms = (end - start) * 1000
                 
                 # Reset the scheduled node
-                self.scheduler.resetNode(scheduled_node, processing_time)
+                self.scheduler.resetNode(scheduled_node, processing_time_ms)
 
             # Log diagnostic information
-            self.diagnostics.addJob(task, scheduled_node, processing_time)
+            self.diagnostics.addJob(task, scheduled_node, processing_time_ms)
 
             self.diagnostics.incrementTasks()
 
             # Forward the raw response received from the remote node
-            return response
+            return response, processing_time_ms
         
         # Couldn't find an edge or cloud node in 3 attempts
         raise s.NoNodesExeception("Could not find an available edge or cloud node to schedule the task")
