@@ -1,13 +1,14 @@
 import sys, logging, socket, time, json, threading
 from lib import net, edge_pb2
-from lib.task_definitions import TaskIDs
+from lib.task_definitions import TaskIDs, task_parameters
+
+RTT_DELAY_S = 0.7
+CLOUD_CYCLES_CPS = 3_400_000_000
 
 def handleRequest(remote, addr):
-    print("Accepted connection")
-
     parsed_header, raw_payload = net.recv(remote)
     if (parsed_header.commandID != net.Commands.SCHEDULE_TASK):
-        print("Error")
+        print("Error - SCHEDULE_TASK only implemented")
         
         remote.close()
         return
@@ -15,30 +16,63 @@ def handleRequest(remote, addr):
     task = edge_pb2.Task()
     task.ParseFromString(raw_payload)
 
+    taskID = task.taskID
+
+    print(f"executing taskID {taskID} on cloud")
+
     # Simulate network delay
-    time.sleep(0.4)
+    time.sleep(RTT_DELAY_S)
 
-    # Simulate task execution
-    match task.inputID:
+    result = ""
+    cycles = 0
+
+    if taskID not in task_parameters:
+        print("TASK ID NOT FOUND!")
+        cycles = 3_000_000_00
+    else:
+        cycles = task_parameters[taskID].cycles
+
+    match taskID:
         case TaskIDs.DETECT_HUMAN:
-            time.sleep(0.188)
+            result = b"true"
         case TaskIDs.CLASSIFY_FRUIT:
-            time.sleep(0.095)
-        case TaskIDs.FRUIT_QUALITY:
-            time.sleep(0.04)
+            result = b"banana"
         case TaskIDs.COMPRESSION:
-            time.sleep(0.03)
+            result = b'\x1f\x8b\x08\x00. \xc4i\x02\xff\xed\xc71\r\x00 \x0c\x000qd7"\x18\x1f\x81\x87%\xc8\xc7H\xfb5\xde\x1cug\xf6\xdd\xd6\xa9\x0cUUUUUUUUUUUUUU\xad\xfc\xfd]w\xd1L\x1d\x00\x00'
+        case TaskIDs.DECOMPRESSION:
+            result = b"ExecutedOnCloud"*500
         case TaskIDs.ENCRYPTION:
-            time.sleep(0.03)
-        case _:
-            print("Task not detected")
-            time.sleep(0.4)
+            result = b'LQ/D+mKeBwXVntQFYXEAbCbusdSiiScwhpSDzDLjTn0Mqw9+7kqDtbEHRA=='
+        case TaskIDs.DECRYPTION:
+            result = b"ExecutedOnCloud"
+        
+        case TaskIDs.BANANA_QUALITY_RIPENESS:
+            result = b"fresh"
+        case TaskIDs.ORANGE_QUALITY_RIPENESS:
+            result = b"fresh"
 
-    response_text = {"value": "EXECUTED ON CLOUD", "inputID": task.inputID}
-    response = net.createResponse(True, json.dumps(response_text).encode()).SerializeToString()
+        case TaskIDs.FRUIT_DEFECTS:
+            result = b"1"
+        case TaskIDs.FRUIT_SIZE:
+            result = b"1"
+        
+        case TaskIDs.OBJECT_COUNT:
+            result = b"1"
+
+        case TaskIDs.FRUIT_QUALITY_AGGREGATION:
+            result = b"1"
+
+        case TaskIDs.REMOVE_BACKGROUND:
+            with open("src/cloud-debug-service/orange_removed_bg.png", "rb") as file:
+                result = file.read() 
+
+    delay = cycles / CLOUD_CYCLES_CPS
+    time.sleep(delay)
+
+    response = net.createResponse(True, result).SerializeToString()
     net.send(remote, net.createHeader(parsed_header.commandID), response)
     
-    print("Done")
+    print(f"completed taskID {taskID}")
 
 def main():
     logging.basicConfig(

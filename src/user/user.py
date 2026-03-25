@@ -1,4 +1,4 @@
-import socket, time, threading, json, random, os, traceback, sys, base64
+import socket, time, threading, json, random, os, traceback, sys, base64, gzip
 from lib import edge_pb2, net, taskoffloader
 from lib.task_definitions import TaskIDs
 
@@ -6,20 +6,38 @@ def main(address):
     try:
         offloader = taskoffloader.TaskOffloader(address)
 
-        with open("src/user/test_data/orange.png", "rb") as f:
-            image_bytes = f.read()
+        # with open("src/user/test_data/orange.png", "rb") as f:
+        #     image_bytes = f.read()
 
-        t0 = time.perf_counter()
-        response = offloader.orange_quality_rating(image_bytes, 800)
-        t1 = time.perf_counter()
+        # t0 = time.perf_counter()
+        # response = offloader.orange_quality_rating(image_bytes, 800)
+        # t1 = time.perf_counter()
 
-        print(response)
-        print(f"Execution time: {(t1-t0) * 1000}ms")
+        # print(response)
+        # print(f"Execution time: {(t1-t0) * 1000}ms")
 
-        return
+        # return
 
-        with open("src/user/test_data/ballon.png", "rb") as f:
+
+        # while True:
+        #     key = os.urandom(32)
+        #     result = offloader.encrypt(key, b"ExecutedOnEdge", 1000)
+        #     print(key)
+        #     print(result.value)
+        #     return
+
+        # return
+
+        # print("ENCRYPTION")
+        # response = offloader.encrypt(, b"This is some plaintext data to be encrypted.", 1000)
+        # print(response)
+        # return
+
+        with open("src/cloud-debug-service/orange_removed_bg.png", "rb") as f:
                 image_bytes = f.read()
+
+        uncompressed_data = b"This is some data that needs to be compressed. " * 20
+        compressed_data = gzip.compress(uncompressed_data)
 
         while True:
             deadline = random.randint(200, 3000)
@@ -29,83 +47,68 @@ def main(address):
             start_time = time.perf_counter()
 
             tasks = [
+                TaskIDs.DETECT_HUMAN,
+                TaskIDs.CLASSIFY_FRUIT,
+                TaskIDs.COMPRESSION,
+                TaskIDs.DECOMPRESSION,
+                TaskIDs.ENCRYPTION,
+                TaskIDs.DECRYPTION,
                 TaskIDs.BANANA_QUALITY_RIPENESS,
                 TaskIDs.ORANGE_QUALITY_RIPENESS,
-                TaskIDs.DETECT_HUMAN,
-                TaskIDs.FRUIT_DEFECTS,
-                TaskIDs.FRUIT_SIZE,
-                TaskIDs.CLASSIFY_FRUIT,  
-                TaskIDs.OBJECT_COUNT,          
+                TaskIDs.OBJECT_COUNT,
             ]
 
             task_id = random.choice(tasks)
 
-            # task_id = 7
             match task_id:
                 case TaskIDs.DETECT_HUMAN:
-                        print("DETECT HUMAN")
+                        task_name = "DETECT HUMAN"
                         response = offloader.detectHuman(image_bytes, deadline)
                 case TaskIDs.CLASSIFY_FRUIT:
-                        print("CLASSIFY FRUIT")
+                        task_name = "CLASSIFY FRUIT"
                         response = offloader.classifyFruit(image_bytes, deadline)
-                case TaskIDs.FRUIT_QUALITY:
-                        print("FRUIT QUALITY")
-                        response = offloader.fruitQuality(image_bytes, deadline)
                 case TaskIDs.COMPRESSION:
-                        print("COMPRESSION")
-                        data = "This is some data that needs to be compressed. " * 20
-                        response = offloader.compress(data, deadline)
+                        task_name = "COMPRESSION"
+                        response = offloader.compress(uncompressed_data, deadline)
                 case TaskIDs.DECOMPRESSION:
-                        print("DECOMPRESSION")
-                        data = "This is some data that needs to be compressed. " * 20
-                        response = offloader.decompress(data, deadline)
+                        task_name = "DECOMPRESSION"
+                        response = offloader.decompress(compressed_data, deadline)
                 case TaskIDs.ENCRYPTION:
-                        print("ENCRYPTION")
-                        response = offloader.encrypt("keykeykeykeykey1", "This is some plaintext data to be encrypted.", deadline)
+                        task_name = "ENCRYPTION"
+                        response = offloader.encrypt(os.urandom(32), b"This is some plaintext data to be encrypted.", deadline)
                 case TaskIDs.DECRYPTION:
-                        print("DECRYPTION")
-                        response = offloader.decrypt("keykeykeykeykey1", "U2FsdGVkX1+I3V6Y5G6u1g6X9s6jZ0bX5Zl5r8QvV3I=", deadline)
+                        task_name = "DECRYPTION"
+                        response = offloader.decrypt(
+                            b'g\x94\xfb\x13\x8a\xc7\x86\x8a\x85UW\xa0\xed\xb1\xf9Z\xe8\xed\xd7\x1c\r\x08\x18\xc5\xea\r\x98\x1c\x87\x03\xd6\xe0',
+                            b'FMeXkkYSYAXkMgtrRsvUm6+OedmjgLpAJ8a+MreO+MWIlRNRzPCekBqJ',
+                            deadline
+                        )
                 case TaskIDs.ORANGE_QUALITY_RIPENESS:
-                        print("ORANGE_QUALITY_RIPENESS")
+                        task_name = "ORANGE_QUALITY_RIPENESS"
                         response = offloader._test_orange_ripeness(image_bytes, deadline)
                 case TaskIDs.BANANA_QUALITY_RIPENESS:
-                        print("BANANA_QUALITY_RIPENESS")
+                        task_name = "BANANA_QUALITY_RIPENESS"
                         response = offloader._test_banana_ripeness(image_bytes, deadline)
 
                 case TaskIDs.FRUIT_DEFECTS:
-                        print("FRUIT_DEFECTS")
+                        task_name = "FRUIT_DEFECTS"
                         response = offloader.fruit_defects(image_bytes, deadline)
                 case TaskIDs.FRUIT_SIZE:
-                        print("FRUIT_SIZE")
+                        task_name = "FRUIT_SIZE"
                         response = offloader.fruit_size(image_bytes, deadline)
+                case TaskIDs.OBJECT_COUNT:
+                        task_name = "OBJECT_COUNT"
+                        response = offloader.object_count(image_bytes, deadline)
 
-                case TaskIDs.ADDITION:
-                        print("ADDITION")
-
-                        a = random.randint(1, 99)
-                        b = random.randint(1, 99)
-
-                        response = offloader.addition(a, b, deadline)
-                case TaskIDs.MULTIPLICATION:
-                        print("MULTIPLICATION")
-
-                        a = random.randint(1, 99)
-                        b = random.randint(1, 99)
-
-                        response = offloader.multiplication(a, b, deadline)
-                case TaskIDs.DIVISION:
-                        print("DIVISION")
-
-                        a = random.randint(1, 99)
-                        b = random.randint(1, 99)
-
-                        response = offloader.division(a, b, deadline)
+                case _:
+                    while True:
+                        print("ERR!!!!!!!!!!!!!!!!")
 
             end_time = time.perf_counter()
             time_elapsed_ms = int((end_time - start_time)*1000)
 
-            print(f"Time Elapsed {time_elapsed_ms}ms")
-            print(f"Response {response}")
+            print(f"""Task name {task_name}\nTime elapsed {time_elapsed_ms}ms\nResponse {response}
+                """)
 
             if (not response.success):
                 # Task dropped

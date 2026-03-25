@@ -3,7 +3,6 @@ from lib.task_definitions import TaskIDs
 
 from src.tasks.detect_human.detect_human import detectHuman
 from src.tasks.classify_fruit.classify_fruit import classifyFruit
-from src.tasks.fruit_quality.fruit_quality import fruitQuality
 from src.tasks.compression.compression import compress, decompress
 from src.tasks.encryption.encryption import encrypt, decrypt
 
@@ -42,8 +41,6 @@ def run_task(taskID: int, data: bytes) -> bytes:
             result = detectHuman(data)
         case TaskIDs.CLASSIFY_FRUIT:
             result = classifyFruit(data)
-        case TaskIDs.FRUIT_QUALITY:
-            result = fruitQuality(data)
         case TaskIDs.COMPRESSION:
             result = compress(data)
         case TaskIDs.DECOMPRESSION:

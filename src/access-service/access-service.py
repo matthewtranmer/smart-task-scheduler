@@ -250,8 +250,8 @@ class EdgeAccess:
         raw_response, success, processing_time_ms = self.handle_task_offload(task_info.task)
         self.logger.debug(f"taskID: {task_info.task.taskID}, processing_time_ms: {processing_time_ms}, deadline_ms: {task_info.task.deadline_ms}")
 
-        # If one of the subtasks misses its deadline, cancel execution
-        if processing_time_ms > task_info.task.deadline_ms:
+        # If one of the subtasks misses its deadline by over 15%, cancel execution
+        if processing_time_ms > task_info.task.deadline_ms * 1.15:
             task_info.task_graph.cancel_task()
 
             self.logger.info(f"TaskID: {task_info.task.taskID} has missed its deadline!")
@@ -499,7 +499,7 @@ def main():
         cloud_address=cloud_address,
         cloud_clock_speed_cps=3.4*10**9, #3.4Ghz
         cloud_RTT_latency_s=0.7,
-        load_factor_usage_threshold=1, 
+        load_factor_usage_threshold=0.6, 
         omega=0.01
     )
     

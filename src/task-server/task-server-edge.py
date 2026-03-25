@@ -129,7 +129,7 @@ class EdgeClient:
                     if (response.error):
                         self.logger.warning(f"Received error while processing task with id {task.taskID}")
                         self.logger.warning(response.traceback)
-                        return net.createResponse(False, response.traceback)
+                        return net.createResponse(False, response.traceback.encode())
 
                     return net.createResponse(True, response.value)
 

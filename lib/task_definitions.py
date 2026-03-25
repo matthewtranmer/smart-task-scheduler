@@ -9,7 +9,6 @@ class TaskIDs():
     # Normal TaskIDs
     DETECT_HUMAN = 0
     CLASSIFY_FRUIT = 1
-    FRUIT_QUALITY = 2
     COMPRESSION = 3
     DECOMPRESSION = 4
     ENCRYPTION = 5
@@ -34,7 +33,6 @@ class TaskIDs():
 task_parameters: dict[int, TaskParameters] = {
     TaskIDs.DETECT_HUMAN: TaskParameters(cycles=624843909, memory_mb=68),
     TaskIDs.CLASSIFY_FRUIT: TaskParameters(cycles=296498930, memory_mb=66),
-    TaskIDs.FRUIT_QUALITY: TaskParameters(cycles=131351691, memory_mb=61),
     TaskIDs.COMPRESSION: TaskParameters(cycles=5173250, memory_mb=38),
     TaskIDs.DECOMPRESSION: TaskParameters(cycles=2697808, memory_mb=38),
     TaskIDs.ENCRYPTION: TaskParameters(cycles=6842475, memory_mb=41),
