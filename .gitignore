@@ -3,3 +3,4 @@ env/
 local/
 src/user/test_data/
 __pycache__/
+*/__pycache__
