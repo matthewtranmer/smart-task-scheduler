@@ -256,7 +256,7 @@ class EdgeAccess:
 
             self.logger.info(f"TaskID: {task_info.task.taskID} has missed its deadline!")
 
-            response = net.createResponse(False, b"Task canceled as it is not on track to hit it's deadline", response_code=552).SerializeToString()
+            response = net.createResponse(False, b"Task canceled as it is not on track to hit it's deadline", response_code=551).SerializeToString()
 
             # Return the response to the remote client
             header = net.createHeader(net.Commands.SCHEDULE_TASK)

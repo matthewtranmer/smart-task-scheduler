@@ -199,7 +199,7 @@ def main(address):
     edge_client = EdgeClient(
         logger=logger,
         access_server_address=access_server_address,
-        cpus=4,
+        cpus=14,
         clock_speed_cps=4*10**9,
         memory_mb=8000
     )
