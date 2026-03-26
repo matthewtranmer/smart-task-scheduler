@@ -214,6 +214,10 @@ if __name__ == "__main__":
         address[1] = int(address[1])
         address = tuple(address)
 
+    cpus = None
+    memory = None
+
+    if len(sys.argv) > 3:
         cpus = int(sys.argv[2])
         memory = int(sys.argv[3])
 
