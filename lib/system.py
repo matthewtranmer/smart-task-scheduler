@@ -53,5 +53,17 @@ def getSystemMemoryMB():
     return psutil.virtual_memory().total // 1024 // 1024
 
 def getClockSpeedCPS():
+    max_frequency = psutil.cpu_freq().max
+    
+    freq_hz = 0
+    
+    # MacOS returns freq in GHz
+    if (max_frequency < 100):
+        freq_hz = max_frequency * 1000 ** 3
+
+    # Normally returns freq in MHz
+    else:
+        freq_hz = max_frequency * 1000 ** 2
+
     # Convert from MHz to Hz
-    return int(psutil.cpu_freq().max) * 1000**2
+    return int(freq_hz)

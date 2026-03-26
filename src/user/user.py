@@ -8,6 +8,8 @@ dropped_tasks = 0
 deadlines_missed = 0
 tasks_executed = 0
 
+problem_tasks = []
+
 with open("src/cloud-debug-service/orange_removed_bg.png", "rb") as f:
         image_bytes = f.read()
 
@@ -71,15 +73,26 @@ def send_task(address, task_id, deadline_ms):
     print(f"""Task name {task_name}\nTime elapsed {time_elapsed_ms}ms\nResponse {response}""")
 
     with lock:
+        problem = False
+        text = f"Task name {task_name}\nTime elapsed {time_elapsed_ms}ms\n"
+
         if (not response.success):
             # Task dropped
             if (response.code == 551):
+                text += "TASK DROPPED\n"
                 dropped_tasks += 1
+                problem = True
+
 
         if time_elapsed_ms > deadline_ms:
-                deadlines_missed += 1
+            text += "DEADLINE MISSED\n"
+            deadlines_missed += 1
+            problem = True
 
         tasks_executed += 1
+
+        if problem:
+            problem_tasks.append(text)
 
 def main(address):
     try:
@@ -111,6 +124,11 @@ def main(address):
     print(f"Tasks executed: {tasks_executed}")
     print(f"Tasks dropped: {dropped_tasks}")
     print(f"Deadlines missed: {deadlines_missed}")
+
+    for message in problem_tasks:
+        print(message)
+        print("-----------------------------------")
+        
 
 if __name__ == "__main__":
     address = None

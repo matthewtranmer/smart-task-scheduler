@@ -200,7 +200,7 @@ def main(address, cpus, memory):
         logger=logger,
         access_server_address=access_server_address,
         cpus=cpus,
-        clock_speed_cps=4*10**9,
+        clock_speed_cps=system.getClockSpeedCPS(),
         memory_mb=memory
     )
 
