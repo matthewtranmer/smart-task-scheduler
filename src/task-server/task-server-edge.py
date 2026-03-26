@@ -181,7 +181,7 @@ class EdgeClient:
 
         threading.Timer(self.heartbeat_interval, self.heartbeatSender).start()
 
-def main(address):
+def main(address, cpus, memory):
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
         #filename='edge-access-log',
@@ -199,9 +199,9 @@ def main(address):
     edge_client = EdgeClient(
         logger=logger,
         access_server_address=access_server_address,
-        cpus=14,
+        cpus=cpus,
         clock_speed_cps=4*10**9,
-        memory_mb=8000
+        memory_mb=memory
     )
 
     edge_client.serve("task_sandbox", timeout=5)
@@ -214,4 +214,7 @@ if __name__ == "__main__":
         address[1] = int(address[1])
         address = tuple(address)
 
-    main(address)
+        cpus = int(sys.argv[2])
+        memory = int(sys.argv[3])
+
+    main(address, cpus, memory)
