@@ -156,7 +156,7 @@ class PoolContainer():
         self.pool.releaseContainer(self)
     
 class ContainerPool:
-    containers = []
+    containers: list[Container] = []
     max_container_count = 0
     current_container = 0
     assigned_containers = 0
@@ -170,6 +170,10 @@ class ContainerPool:
         for i in range(container_count):
             new_container = Container(image=image)
             self.containers.append(new_container)
+
+
+        for container in self.containers:
+            container.create_socket()
 
     def getContainer(self, memory):
         self.lock.acquire()
