@@ -32,6 +32,9 @@ def main():
             response.error = False
             serialized_response = response.SerializeToString()
 
+            with open("/app/test_output.txt", "a") as file:
+                file.write(f"taskID: {incoming_task.taskID} - payload length: {len(serialized_response)}")
+
             write_data(serialized_response)
 
         except Exception as e:

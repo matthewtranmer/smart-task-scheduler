@@ -174,6 +174,9 @@ class Container:
         
         received_data = payload[4:]
         length_bytes = payload[:4]
+
+        print(f"Length bytes: {length_bytes}")
+
         buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
 
         print(f"Buf length: {buffer_length}")
