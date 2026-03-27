@@ -91,6 +91,8 @@ class Container:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(("127.0.0.1", self.port))
 
+        print("created socket")
+
     def send(self, data: bytes):
         if self.sock == None:
             self.create_socket()
@@ -170,7 +172,6 @@ class ContainerPool:
         for i in range(container_count):
             new_container = Container(image=image)
             self.containers.append(new_container)
-
 
         for container in self.containers:
             container.create_socket()
@@ -252,6 +253,9 @@ class StaticContainerPool(ContainerPool):
         for id in cpu_ids:
             new_container = Container(image=image, cpuset_cpus=str(id))
             self.containers.append(new_container)
+
+        for container in self.containers:
+            container.create_socket()
 
     def getContainer(self):
         self.assigned_containers += 1

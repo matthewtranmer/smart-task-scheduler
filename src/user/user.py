@@ -13,7 +13,7 @@ def main(address):
         response = offloader.REMOVE_BG_TEST(image_bytes, 3000)
         t1 = time.perf_counter()
 
-        print(response)
+        # print(response)
         print(f"Execution time: {(t1-t0) * 1000}ms")
 
         return
