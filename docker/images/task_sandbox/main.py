@@ -19,7 +19,8 @@ def write_data(data: bytes):
     with open("/app/test_output.txt", "a") as file:
         file.write(f"payload length: {payload_length}, payload_length_bytes:{payload_length_bytes}\n")
 
-    sys.stdout.buffer.write(payload_length_bytes + data)
+    sys.stdout.buffer.write(payload_length_bytes)
+    sys.stdout.buffer.write(data)
     sys.stdout.buffer.flush()
 
 def main():

@@ -103,6 +103,15 @@ class TaskOffloader:
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)
+    
+
+    def REMOVE_BG_TEST(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
+        task = edge_pb2.Task()
+        task.taskID = TaskIDs.REMOVE_BACKGROUND
+        task.input = image_bytes
+        task.deadline_ms = deadline_ms
+
+        return self._submitTask(task)
 
     def _submitTask(self, task) -> edge_pb2.Response:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

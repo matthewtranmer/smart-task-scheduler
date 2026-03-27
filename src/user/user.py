@@ -6,17 +6,17 @@ def main(address):
     try:
         offloader = taskoffloader.TaskOffloader(address)
 
-        # with open("src/user/test_data/orange.png", "rb") as f:
-        #     image_bytes = f.read()
+        with open("src/user/test_data/orange.png", "rb") as f:
+            image_bytes = f.read()
 
-        # t0 = time.perf_counter()
-        # response = offloader.orange_quality_rating(image_bytes, 800)
-        # t1 = time.perf_counter()
+        t0 = time.perf_counter()
+        response = offloader.REMOVE_BG_TEST(image_bytes, 3000)
+        t1 = time.perf_counter()
 
-        # print(response)
-        # print(f"Execution time: {(t1-t0) * 1000}ms")
+        print(response)
+        print(f"Execution time: {(t1-t0) * 1000}ms")
 
-        # return
+        return
 
 
         # while True:
