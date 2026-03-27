@@ -116,15 +116,22 @@ class Container:
     def send(self, data: bytes):
         self.sock._sock.sendall(len(data).to_bytes(4, "big", signed=False) + data)
 
-# TODO: validate header
     def _parseDockerHeader(self, header) -> dict:
+        # Validate header
+
+        if len(header) != 8:
+            raise ValueError("Docker header is not valid! Incorrect header length")
+        
+        if header[0] not in (1, 2):
+            raise ValueError("Docker header is not valid! Invalid stream type byte")
+
         parsed_header = {}
 
         if (header[0] == 1):
             parsed_header["stream"] = "stdout" 
         elif (header[0] == 2):
             parsed_header["stream"] = "stderr"
-
+            
         payload_length_bytes = header[4:]
         parsed_header["payload_length"] = int.from_bytes(payload_length_bytes, 'big', signed=False)
 
