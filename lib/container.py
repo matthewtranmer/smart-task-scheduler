@@ -162,7 +162,9 @@ class Container:
 
     # Returns the data in bytes, and True on an unhandled error
     def receive(self) -> tuple[bytes, bool]:
-        header, data_length_bytes = self._recv()
+        header, payload = self._recv()
+
+        print(header)
 
         if header["stream"] == "stderr":
             return payload, True
@@ -170,22 +172,18 @@ class Container:
         if (header == None):
             return (payload, False)
         
-        print(f"data_length_bytes: {data_length_bytes}")
-        data_length = int.from_bytes(data_length_bytes, byteorder="big", signed=False)
-        print(f"data_length: {data_length}")
+        received_data = payload[4:]
+        length_bytes = payload[:4]
 
-        received_data = b""
+        print(f"Length bytes: {length_bytes}")
+
+        buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
+
+        print(f"Buf length: {buffer_length}")
 
         # 4 bytes for length
-        while len(received_data) < data_length:
+        while len(received_data) < buffer_length:
             header, payload = self._recv()
-
-            if header["stream"] == "stderr":
-                return payload, True
-
-            if (header == None):
-                return (payload, False)
-
             received_data += payload
 
         print(f"Length of received data: {len(received_data)}")
