@@ -28,26 +28,27 @@ class Container:
     def __init__(self, image, cpuset_cpus=None, timeout=10):
         self.container = self.client.containers.create(
             image,
-            tty=False,
-            stdin_open=True,
             auto_remove=True,
-            network_disabled=True,
             detach=True,
             cpuset_cpus=cpuset_cpus,
+            ports={"8000/tcp": ("127.0.0.1", None)} # Chose a random port
         )
 
         self.containerID = self.container.id
         self.image = image
         self.cpuset_cpus = cpuset_cpus
         self.timeout = timeout
+        self.sock = None
 
         self.container.start()
+        self.container.reload()
 
-        self.sock = self.container.attach_socket(params={"stdin": 1, "stdout": 1, "stderr": 1,"stream": 1})
-        self.sock._sock.settimeout(timeout)
+        # Get the random port the container has chosen
+        self.port = int(
+            self.container.attrs["NetworkSettings"]["Ports"]["8000/tcp"][0]["HostPort"]
+        )
 
-    def settimeout(self, timeout):
-        self.sock._sock.settimeout(timeout)
+        print(f"Container port: {self.port}")
 
     def getContainer(self):
         return self.container
@@ -58,24 +59,6 @@ class Container:
             mem_limit=memory_bytes,
             memswap_limit=memory_bytes
         )
-
-    def _getErrorFromContainer(self):
-        error_message = ""
-        self.settimeout(1)
-
-        try:
-            while output != "":
-                output, _ = self.receive()
-                error_message += output
-        except TimeoutError:
-            pass
-        finally:
-            self.settimeout(self.timeout)
-
-        return error_message
-        
-    # Handle bizantine execptions
-    # handle timeout
 
     def executeTask(self, task: edge_pb2.Task) -> edge_pb2.ContainerResponse:
         # Convert task into a JSON string to give to the container
@@ -92,16 +75,8 @@ class Container:
 
         # Continue until we receive the indended output 
         while inputID != task.inputID:
-            output, error = self.receive()
+            output = self.receive()
 
-            # EOF from container, ignore
-            if output == "":
-                continue
-
-            # Handle container errors
-            if (error):
-                raise InternalContainerError(output)
-                            
             response.ParseFromString(output)
             inputID = response.inputID
 
@@ -111,84 +86,45 @@ class Container:
         response.processing_time_ms = int(execution_time_ms)
 
         return response
-        
+    
+    def create_socket(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect(("127.0.0.1", self.port))
 
     def send(self, data: bytes):
-        self.sock._sock.sendall(len(data).to_bytes(4, "big", signed=False) + data)
+        if self.sock == None:
+            self.create_socket()
 
-    def _parseDockerHeader(self, header) -> dict:
-        # Validate header
+        length_header = len(data).to_bytes(4, "big", signed=False)
 
-        if len(header) != 8:
-            raise ValueError("Docker header is not valid! Incorrect header length")
-        
-        if header[0] not in (1, 2):
-            raise ValueError("Docker header is not valid! Invalid stream type byte")
-
-        parsed_header = {}
-
-        if (header[0] == 1):
-            parsed_header["stream"] = "stdout" 
-        elif (header[0] == 2):
-            parsed_header["stream"] = "stderr"
-            
-        payload_length_bytes = header[4:]
-        parsed_header["payload_length"] = int.from_bytes(payload_length_bytes, 'big', signed=False)
-
-        return parsed_header
-
-    def _recv(self) -> tuple[dict, bytes]:
-        buffer = b""
-        header = self.sock._sock.recv(8)
-
-        if (len(header) < 8):
-            raise EOFError(f"Container {self.containerID} closed output stream")
-        
-        parsed_header = self._parseDockerHeader(header)
-
-        buffer = b""
-        payload_length = parsed_header["payload_length"]
-        bytes_received = 0
-
-        while bytes_received < payload_length:
-            bytes_remaining = payload_length - bytes_received
-
-            data = self.sock._sock.recv(bytes_remaining)
-            bytes_received += len(data)
-
-            buffer += data
-
-        return (parsed_header, data)
+        self.sock.sendall(length_header + data)
 
     # Returns the data in bytes, and True on an unhandled error
-    def receive(self) -> tuple[bytes, bool]:
-        header, payload = self._recv()
-
-        print(header)
-
-        if header["stream"] == "stderr":
-            return payload, True
-
-        if (header == None):
-            return (payload, False)
+    def receive(self) -> bytes:
+        if self.sock == None:
+            self.create_socket()
+            
+        BUF_SIZE = 65536
         
-        received_data = payload[4:]
-        length_bytes = payload[:4]
+        payload = self.sock.recv(BUF_SIZE)
 
-        print(f"Length bytes: {length_bytes}")
+        if payload == b'':
+            raise EOFError("Connection closed by peer")
+
+        if len(payload) < 4:
+            raise ValueError("Header could not be read")
+        
+        length_bytes = payload[:4]        
+        received_data = payload[4:]
 
         buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
 
-        print(f"Buf length: {buffer_length}")
-
-        # 4 bytes for length
         while len(received_data) < buffer_length:
-            header, payload = self._recv()
+            payload = self.sock.recv(BUF_SIZE)
             received_data += payload
 
-        print(f"Length of received data: {len(received_data)}")
         
-        return (received_data, False)
+        return received_data
     
     def stop(self):
         self.container.stop()
