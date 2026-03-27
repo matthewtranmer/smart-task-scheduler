@@ -13,7 +13,13 @@ def read_data() -> bytes:
     return received_data
 
 def write_data(data: bytes):
-    sys.stdout.buffer.write(len(data).to_bytes(4, byteorder="big", signed=False) + data)
+    payload_length = len(data)
+    payload_length_bytes = payload_length.to_bytes(4, byteorder="big", signed=False)
+
+    with open("/app/test_output.txt", "a") as file:
+        file.write(f"payload length: {payload_length}, payload_length_bytes:{payload_length_bytes}\n")
+
+    sys.stdout.buffer.write(payload_length_bytes + data)
     sys.stdout.buffer.flush()
 
 def main():
@@ -31,9 +37,6 @@ def main():
             response.value = result
             response.error = False
             serialized_response = response.SerializeToString()
-
-            with open("/app/test_output.txt", "a") as file:
-                file.write(f"taskID: {incoming_task.taskID} - payload length: {len(serialized_response)}")
 
             write_data(serialized_response)
 
