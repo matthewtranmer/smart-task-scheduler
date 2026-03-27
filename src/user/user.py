@@ -9,12 +9,15 @@ def main(address):
         with open("src/user/test_data/orange.png", "rb") as f:
             image_bytes = f.read()
 
-        t0 = time.perf_counter()
-        response = offloader.REMOVE_BG_TEST(image_bytes, 3000)
-        t1 = time.perf_counter()
+        while True:
+            t0 = time.perf_counter()
+            response = offloader.REMOVE_BG_TEST(image_bytes, 1200)
+            t1 = time.perf_counter()
 
-        # print(response)
-        print(f"Execution time: {(t1-t0) * 1000}ms")
+            if not response.success:
+                print(response)
+
+            print(f"Execution time: {(t1-t0) * 1000}ms")
 
         return
 

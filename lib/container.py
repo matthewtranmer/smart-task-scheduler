@@ -111,7 +111,7 @@ class Container:
         payload = self.sock.recv(BUF_SIZE)
 
         if payload == b'':
-            raise EOFError("Connection closed by peer")
+            raise EOFError(f"Connection closed by peer. Container ID {self.containerID}")
 
         if len(payload) < 4:
             raise ValueError("Header could not be read")
@@ -253,6 +253,8 @@ class StaticContainerPool(ContainerPool):
         for id in cpu_ids:
             new_container = Container(image=image, cpuset_cpus=str(id))
             self.containers.append(new_container)
+
+        time.sleep(2)
 
         for container in self.containers:
             container.create_socket()
