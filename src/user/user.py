@@ -40,9 +40,10 @@ def main(address):
         compressed_data = gzip.compress(uncompressed_data)
 
         while True:
-            deadline = random.randint(1000, 3000)
+            # deadline = random.randint(1000, 3000)
+            deadline = 5000
+
             print(f"deadline: {deadline}")
-        #     deadline = 1
 
             start_time = time.perf_counter()
 
@@ -54,7 +55,7 @@ def main(address):
                 # TaskIDs.ENCRYPTION,
                 # TaskIDs.DECRYPTION,
                 # TaskIDs.OBJECT_COUNT,
-                TaskIDs.BANANA_QUALITY_RATING,
+                # TaskIDs.BANANA_QUALITY_RATING,
                 TaskIDs.ORANGE_QUALITY_RATING,
             ]
 
@@ -109,6 +110,8 @@ def main(address):
                     for i in range(30):
                         print("TASK DROPPED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     time.sleep(5)
+
+            break
 
     except Exception as e:
         print("CLIENT SIDE EXECEPTION")

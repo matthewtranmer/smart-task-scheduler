@@ -164,6 +164,8 @@ class Container:
     def receive(self) -> tuple[bytes, bool]:
         header, payload = self._recv()
 
+        print(header)
+
         if header["stream"] == "stderr":
             return payload, True
 
@@ -174,10 +176,14 @@ class Container:
         length_bytes = payload[:4]
         buffer_length = int.from_bytes(length_bytes, byteorder="big", signed=False)
 
+        print(f"Buf length: {buffer_length}")
+
         # 4 bytes for length
         while len(received_data) < buffer_length:
             header, payload = self._recv()
             received_data += payload
+
+        print(f"Length of received data: {len(received_data)}")
         
         return (received_data, False)
     
