@@ -141,8 +141,8 @@ class TaskDependencyGraph():
                 if node_deadline_ms < node.task.deadline_ms or node.task.deadline_ms == 0:
                     node.task.deadline_ms = node_deadline_ms
 
-        for node in self.nodes:
-            print(f"Assigned deadline {node.task.deadline_ms}ms to taskID {node.task.taskID}")
+        # for node in self.nodes:
+            # print(f"Assigned deadline {node.task.deadline_ms}ms to taskID {node.task.taskID}")
 
     #  Return a manifest of the start tasks and the node ids
     def get_start_tasks(self, input_data: bytes) -> tuple[list[edge_pb2.Task], list[int]]:
@@ -195,7 +195,7 @@ class TaskDependencyGraph():
             if completed_node_id in self.dependency_list[key]:
                 dependent_nodes.append(key)
 
-        print(f"dependent_nodes: {dependent_nodes}")
+        # print(f"dependent_nodes: {dependent_nodes}")
 
         executable_nodes: list[DAGNode] = []
 
@@ -226,7 +226,7 @@ class TaskDependencyGraph():
             for dependent_node_id in dependent_nodes:
                 dependent_task_id = self.get_node(dependent_node_id).task_id
 
-                print(f"New input detected: {self.result_storage[dependent_node_id][:40]}")
+                # print(f"New input detected: {self.result_storage[dependent_node_id][:40]}")
 
                 # Encode outputs from tasks as base 64 strings encodeable by JSON
                 data_b64_str = base64.encodebytes(self.result_storage[dependent_node_id]).decode()

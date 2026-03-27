@@ -77,22 +77,7 @@ class TaskOffloader:
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)
-    
-    def fruit_size(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.FRUIT_SIZE
-        task.input = image_bytes
-        task.deadline_ms = deadline_ms
 
-        return self._submitTask(task)
-    
-    def fruit_defects(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.FRUIT_DEFECTS
-        task.input = image_bytes
-        task.deadline_ms = deadline_ms
-
-        return self._submitTask(task)
     
     def object_count(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
         task = edge_pb2.Task()
@@ -118,60 +103,6 @@ class TaskOffloader:
         task.deadline_ms = deadline_ms
 
         return self._submitTask(task)
-
-    # Fake tasks ************
-
-    def addition(self, key: bytes, a: int, b: int, deadline_ms: int) -> edge_pb2.Response:
-        params = {"a": a, "b": b}
-        json_params = json.dumps(params)
-        
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.ADDITION
-        task.input = json_params.encode()
-        task.deadline_ms = deadline_ms
-
-        return self._submitTask(task)
-    
-    def multiplication(self, key: bytes, a: int, b: int, deadline_ms: int) -> edge_pb2.Response:
-        params = {"a": a, "b": b}
-        json_params = json.dumps(params)
-        
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.MULTIPLICATION
-        task.input = json_params.encode()
-        task.deadline_ms = deadline_ms
-
-        return self._submitTask(task)
-    
-    def division(self, key: bytes, a: int, b: int, deadline_ms: int) -> edge_pb2.Response:
-        params = {"a": a, "b": b}
-        json_params = json.dumps(params)
-        
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.DIVISION
-        task.input = json_params.encode()
-        task.deadline_ms = deadline_ms
-
-        return self._submitTask(task)
-    
-    # TESTING -------------------------------------
-
-    def _test_orange_ripeness(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.ORANGE_QUALITY_RIPENESS
-        task.input = image_bytes
-        task.deadline_ms = deadline_ms
-
-        return self._submitTask(task)
-
-    def _test_banana_ripeness(self, image_bytes: bytes, deadline_ms: int) -> edge_pb2.Response:
-        task = edge_pb2.Task()
-        task.taskID = TaskIDs.BANANA_QUALITY_RIPENESS
-        task.input = image_bytes
-        task.deadline_ms = deadline_ms
-
-        return self._submitTask(task)
-
 
     def _submitTask(self, task) -> edge_pb2.Response:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

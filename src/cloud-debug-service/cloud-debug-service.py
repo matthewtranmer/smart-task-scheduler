@@ -1,9 +1,20 @@
 import sys, logging, socket, time, json, threading
 from lib import net, edge_pb2
 from lib.task_definitions import TaskIDs, task_parameters
+# import numpy as np
+# import io
 
 RTT_DELAY_S = 0.7
 CLOUD_CYCLES_CPS = 3_400_000_000
+
+with open("src/cloud-debug-service/orange_removed_bg.png", "rb") as file:
+    image_bytes = file.read() 
+
+# np_arr = np.frombuffer(image_bytes, np.uint8)
+# buffer = io.BytesIO()
+# np_arr.save(buffer, format='PNG')
+# orange_removed_bg = buffer.getvalue()
+
 
 def handleRequest(remote, addr):
     parsed_header, raw_payload = net.recv(remote)
@@ -63,8 +74,7 @@ def handleRequest(remote, addr):
             result = b"1"
 
         case TaskIDs.REMOVE_BACKGROUND:
-            with open("src/cloud-debug-service/orange_removed_bg.png", "rb") as file:
-                result = file.read() 
+            result = image_bytes
 
     delay = cycles / CLOUD_CYCLES_CPS
     time.sleep(delay)

@@ -116,6 +116,7 @@ class Container:
     def send(self, data: bytes):
         self.sock._sock.sendall(len(data).to_bytes(4, "big", signed=False) + data)
 
+# TODO: validate header
     def _parseDockerHeader(self, header) -> dict:
         parsed_header = {}
 
@@ -130,13 +131,26 @@ class Container:
         return parsed_header
 
     def _recv(self) -> tuple[dict, bytes]:
+        buffer = b""
         header = self.sock._sock.recv(8)
+
         if (len(header) < 8):
             raise EOFError(f"Container {self.containerID} closed output stream")
         
         parsed_header = self._parseDockerHeader(header)
 
-        data = self.sock._sock.recv(parsed_header["payload_length"])
+        buffer = b""
+        payload_length = parsed_header["payload_length"]
+        bytes_received = 0
+
+        while bytes_received < payload_length:
+            bytes_remaining = payload_length - bytes_received
+
+            data = self.sock._sock.recv(bytes_remaining)
+            bytes_received += len(data)
+
+            buffer += data
+
         return (parsed_header, data)
 
     # Returns the data in bytes, and True on an unhandled error

@@ -20,7 +20,7 @@ task_definitions = [
    {
        "task_name": "human_detection",
        "task_id": TaskIDs.DETECT_HUMAN,
-       "deadline_range_seconds": (0.2, 0.7),
+       "deadline_range_seconds": (0.3, 0.7),
    }, 
    {
        "task_name": "classify_fruit",
@@ -35,22 +35,22 @@ task_definitions = [
    {
        "task_name": "encryption",
        "task_id": TaskIDs.ENCRYPTION,
-       "deadline_range_seconds": (0.4, 3.0),
+       "deadline_range_seconds": (0.3, 3.0),
    },
    {
        "task_name": "decryption",
        "task_id": TaskIDs.DECRYPTION,
-       "deadline_range_seconds": (0.4, 3.0),
+       "deadline_range_seconds": (0.3, 3.0),
    },
    {
        "task_name": "compression",
        "task_id": TaskIDs.COMPRESSION,
-       "deadline_range_seconds": (0.3, 3.0),
+       "deadline_range_seconds": (0.2, 3.0),
    },
    {
        "task_name": "decompression",
-       "task_id": TaskIDs.DECRYPTION,
-       "deadline_range_seconds": (0.3, 3.0),
+       "task_id": TaskIDs.DECOMPRESSION,
+       "deadline_range_seconds": (0.2, 3.0),
    },
    {
        "task_name": "banana_quality_rating",
@@ -64,7 +64,7 @@ task_definitions = [
    }
 ]
 
-MULTIPLIER = 1.5
+MULTIPLIER = 1
 
 def create_tasks(frequency_hz, task_definition, task_list, time):
     period = 1 / frequency_hz
@@ -92,7 +92,7 @@ output_dataset = []
 
 
 # Iteration = 1 second
-for time in range(60):
+for time in range(120):
     current_tasks = []    
 
     for task_definition in task_definitions:
@@ -107,7 +107,7 @@ for time in range(60):
                         time=time
                     )
 
-            case "fruit_identification":
+            case "classify_fruit":
                 # Called between 20 and 30 times per second
                 frequency_hz=random.randint(int(20 * MULTIPLIER), int(30 * MULTIPLIER))
 

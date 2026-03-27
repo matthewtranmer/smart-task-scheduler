@@ -153,7 +153,7 @@ class EdgeAccess:
 
         # Populate task resource parameters if the task is a normal task or sub task (not a parallel task)
         if task.taskID not in dependency_graph_definitions.parallel_task_IDs:
-            print(f"Task is not a parallel task")
+            self.logger.debug(f"Task is not a parallel task")
             parameters: task_definitions.TaskParameters = task_definitions.task_parameters[task.taskID]
 
             task.cycles_required = parameters.cycles
@@ -483,7 +483,7 @@ def main():
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
         #filename='edge-access-log',
-        level=logging.DEBUG,
+        level=logging.INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     logger = logging.getLogger(__name__)
