@@ -4,3 +4,4 @@ local/
 src/user/test_data/
 __pycache__/
 */__pycache__
+lib/__pycache__/
