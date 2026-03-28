@@ -1,42 +1,43 @@
 CLOUD + EDGE:
-Low (0.4)
-Tasks attempted: 8358
+Low (0.5)
+Tasks attempted: 4284
 Tasks failed: 2
-Dropped tasks: 2
+Dropped tasks: 1
+Deadlines missed: 1
+
+Medium (1)
+Tasks attempted: 8968
+Tasks failed: 11
+Dropped tasks: 11
 Deadlines missed: 0
 
-Normal (1)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
-
 High (1.5)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 13073
+Tasks failed: 437
+Dropped tasks: 390
+Deadlines missed: 47
 
 Very-High (2)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 17594
+Tasks failed: 1157
+Dropped tasks: 907
+Deadlines missed: 250
 
 
 
 WITHOUT CLOUD:
-Low (0.4)
-Tasks attempted: 
-Tasks failed: 
-Dropped tasks: 
-Deadlines missed: 
+Low (0.5)
+Tasks attempted: 4284
+Tasks failed: 27
+Tasks dropped: 27
+Deadlines missed: 0
 
-Normal (1)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+
+Medium (1)
+Tasks attempted: 8968
+Tasks failed: 1987
+Tasks dropped: 1985
+Deadlines missed: 2
 
 High (1.5)
 Tasks attempted:
@@ -53,13 +54,13 @@ Deadlines missed:
 
 
 CLOUD ONLY:
-Low (0.4)
+Low (0.5)
 Tasks attempted: 
 Tasks failed: 
 Dropped tasks: 
 Deadlines missed: 
 
-Normal (1)
+Medium (1)
 Tasks attempted:
 Tasks failed:
 Dropped tasks:

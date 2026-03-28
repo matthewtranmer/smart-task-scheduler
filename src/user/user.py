@@ -126,6 +126,11 @@ def main(address, task_dataset_file_path):
 
     time.sleep(5)
 
+    for message in problem_tasks:
+    print(message)
+    print("-----------------------------------")
+        
+
     print("Task simulation finished!")
     print(f"Time elapsed: {t1-t0}")
     print(f"Tasks attempted: {tasks_attempted}")
@@ -135,10 +140,7 @@ def main(address, task_dataset_file_path):
     print()
     print()
 
-    for message in problem_tasks:
-        print(message)
-        print("-----------------------------------")
-        
+
 
 if __name__ == "__main__":
     address = None

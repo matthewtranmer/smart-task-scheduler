@@ -499,7 +499,7 @@ def main():
         cloud_address=cloud_address,
         cloud_clock_speed_cps=3.4*10**9, #3.4Ghz
         cloud_RTT_latency_s=0.7,
-        load_factor_usage_threshold=0.6, 
+        load_factor_usage_threshold=1, # 0.6 CHANGE 
         omega=0.01
     )
     

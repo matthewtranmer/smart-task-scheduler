@@ -323,10 +323,10 @@ class SchedulerV1(Scheduler):
                 print(f"Nodes detected {len(self.nodes)}")
                 self.logger.info("No free edge nodes available to process task")
 
-                # Test if task is viable to run on the cloud
-                cloud_execution_time = self.calculate_cloud_processing_time(task_cycles_required)
-                if cloud_execution_time < task_deadline_s:
-                    return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
+                # # Test if task is viable to run on the cloud
+                # cloud_execution_time = self.calculate_cloud_processing_time(task_cycles_required)
+                # if cloud_execution_time < task_deadline_s:
+                #     return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
 
                 # Task won't be able to be completed in time - drop
                 self.logger.info("Task dropped!!")
