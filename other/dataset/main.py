@@ -97,10 +97,10 @@ def main(multipler, output_file_name):
         for task_definition in task_definitions:
             match task_definition["task_name"]:
                 case "human_detection":
-                    # 30% chance of being called
-                    if (random.uniform(0, 1) > 0.7):
+                    # 20% chance of being called
+                    if (random.uniform(0, 1) > 0.8):
                         create_tasks(
-                            frequency_hz=int(30 * multipler),
+                            frequency_hz=int(20 * multipler),
                             task_definition=task_definition,
                             task_list=current_tasks,
                             time=time
@@ -108,7 +108,7 @@ def main(multipler, output_file_name):
 
                 case "classify_fruit":
                     # Called between 20 and 30 times per second
-                    frequency_hz=random.randint(int(20 * multipler), int(30 * multipler))
+                    frequency_hz=random.randint(int(10 * multipler), int(25 * multipler))
 
                     create_tasks(
                         frequency_hz=frequency_hz,
@@ -135,7 +135,7 @@ def main(multipler, output_file_name):
 
                 case "object_count":
                     create_tasks(
-                        frequency_hz=random.randint(int(10 * multipler), int(20 * multipler)),
+                        frequency_hz=random.randint(int(2 * multipler), int(10 * multipler)),
                         task_definition=task_definition,
                         task_list=current_tasks,
                         time=time
@@ -143,7 +143,7 @@ def main(multipler, output_file_name):
 
                 case "encryption":
                     create_tasks(
-                        frequency_hz=int(10 * multipler),
+                        frequency_hz=int(4 * multipler),
                         task_definition=task_definition,
                         task_list=current_tasks,
                         time=time
@@ -151,7 +151,7 @@ def main(multipler, output_file_name):
 
                 case "decryption":
                     create_tasks(
-                        frequency_hz=int(10 * multipler),
+                        frequency_hz=int(4 * multipler),
                         task_definition=task_definition,
                         task_list=current_tasks,
                         time=time
@@ -159,7 +159,7 @@ def main(multipler, output_file_name):
 
                 case "compression":
                     create_tasks(
-                        frequency_hz=int(40 * multipler),
+                        frequency_hz=int(10 * multipler),
                         task_definition=task_definition,
                         task_list=current_tasks,
                         time=time
@@ -167,7 +167,7 @@ def main(multipler, output_file_name):
 
                 case "decompression":
                     create_tasks(
-                        frequency_hz=int(40 * multipler),
+                        frequency_hz=int(10 * multipler),
                         task_definition=task_definition,
                         task_list=current_tasks,
                         time=time
