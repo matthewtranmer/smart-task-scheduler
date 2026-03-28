@@ -127,8 +127,8 @@ def main(address, task_dataset_file_path):
     time.sleep(5)
 
     for message in problem_tasks:
-    print(message)
-    print("-----------------------------------")
+        print(message)
+        print("-----------------------------------")
         
 
     print("Task simulation finished!")
