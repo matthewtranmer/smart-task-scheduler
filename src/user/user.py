@@ -95,20 +95,22 @@ def send_task(address, task_id, deadline_ms):
             problem_tasks.append(text)
 
 def main(address, task_dataset_file_path):
+    t0 = time.perf_counter()
+
     try:
         with open(task_dataset_file_path, "r") as f_dataset:
             dataset = json.load(f_dataset)
 
-        current_time = 0.0
+        start_time = time.time()
 
         for task in dataset:
             task_id = task["task_id"]
             deadline_ms = int(task["deadline_seconds"] * 1000)
             start_time_seconds = task["start_time_seconds"]
 
-            if start_time_seconds > current_time:
-                time.sleep(start_time_seconds - current_time)
-                current_time = start_time_seconds
+            # Poll until we need to transmit the task
+            while time.time() - start_time < start_time_seconds:
+                pass
 
             print(f"Executing task with id {task_id}")
             threading.Thread(target=send_task, args=(address, task_id, deadline_ms)).start()
@@ -118,9 +120,12 @@ def main(address, task_dataset_file_path):
         traceback.print_exc()
         os._exit(-1)
 
+    t1 = time.perf_counter()
+
     time.sleep(5)
 
     print("Task simulation finished!")
+    print(f"Time elapsed: {t1-t0}")
     print(f"Tasks executed: {tasks_executed}")
     print(f"Tasks dropped: {dropped_tasks}")
     print(f"Deadlines missed: {deadlines_missed}")
@@ -143,8 +148,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         task_dataset_file_path = sys.argv[2]
 
-    t0 = time.perf_counter()
+    
     main(address, task_dataset_file_path)
-    t1 = time.perf_counter()
 
-    print(f"Time elapsed {t1 - t0}s")

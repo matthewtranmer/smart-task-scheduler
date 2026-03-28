@@ -250,8 +250,8 @@ class EdgeAccess:
         raw_response, success, processing_time_ms = self.handle_task_offload(task_info.task)
         self.logger.debug(f"taskID: {task_info.task.taskID}, processing_time_ms: {processing_time_ms}, deadline_ms: {task_info.task.deadline_ms}")
 
-        # If one of the subtasks misses its deadline by over 15%, cancel execution
-        if processing_time_ms > task_info.task.deadline_ms * 1.15:
+        # If one of the subtasks misses its deadline by over 50%, cancel execution
+        if processing_time_ms > task_info.task.deadline_ms * 1.50:
             task_info.task_graph.cancel_task()
 
             self.logger.info(f"TaskID: {task_info.task.taskID} has missed its deadline!")

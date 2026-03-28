@@ -21,7 +21,7 @@ task_definitions = [
    {
        "task_name": "human_detection",
        "task_id": TaskIDs.DETECT_HUMAN,
-       "deadline_range_seconds": (0.5, 0.9),
+       "deadline_range_seconds": (0.65, 0.9),
    }, 
    {
        "task_name": "classify_fruit",
@@ -56,12 +56,12 @@ task_definitions = [
    {
        "task_name": "banana_quality_rating",
        "task_id": TaskIDs.BANANA_QUALITY_RATING,
-       "deadline_range_seconds": (1.5, 2.5),
+       "deadline_range_seconds": (2.2, 5),
    },
    {
        "task_name": "orange_quality_rating",
        "task_id": TaskIDs.ORANGE_QUALITY_RATING,
-       "deadline_range_seconds": (1.5, 2.5),
+       "deadline_range_seconds": (2.2, 5),
    }
 ]
 
