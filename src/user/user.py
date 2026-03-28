@@ -6,7 +6,8 @@ lock = threading.Lock()
 
 dropped_tasks = 0
 deadlines_missed = 0
-tasks_executed = 0
+tasks_attempted = 0
+tasks_failed = 0
 
 problem_tasks = []
 
@@ -17,7 +18,7 @@ uncompressed_data = b"This is some data that needs to be compressed. " * 20
 compressed_data = gzip.compress(uncompressed_data)
 
 def send_task(address, task_id, deadline_ms):
-    global tasks_executed, dropped_tasks, deadlines_missed
+    global tasks_attempted, dropped_tasks, deadlines_missed, tasks_failed
 
     start_time = time.perf_counter()
 
@@ -89,10 +90,11 @@ def send_task(address, task_id, deadline_ms):
             deadlines_missed += 1
             problem = True
 
-        tasks_executed += 1
+        tasks_attempted += 1
 
         if problem:
             problem_tasks.append(text)
+            tasks_failed += 1
 
 def main(address, task_dataset_file_path):
     t0 = time.perf_counter()
@@ -126,9 +128,12 @@ def main(address, task_dataset_file_path):
 
     print("Task simulation finished!")
     print(f"Time elapsed: {t1-t0}")
-    print(f"Tasks executed: {tasks_executed}")
+    print(f"Tasks attempted: {tasks_attempted}")
+    print(f"Tasks failed: {tasks_failed}")
     print(f"Tasks dropped: {dropped_tasks}")
     print(f"Deadlines missed: {deadlines_missed}")
+    print()
+    print()
 
     for message in problem_tasks:
         print(message)
