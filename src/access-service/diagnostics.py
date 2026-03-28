@@ -1,7 +1,7 @@
 import threading
 from lib import scheduler as s
 from lib import edge_pb2
-
+from lib import task_definitions
 
 class Diagnostics:
     JOB_HISTORY_SIZE = 200
@@ -177,7 +177,7 @@ class Diagnostics:
         for task_id in self.task_processing_times:
             data = {}
 
-            data["name"] = f"{s.Tasks.getName(task_id)}"
+            data["name"] = f"{task_definitions.task_names[task_id]}"
             data["processing_time"] = self.task_processing_times[task_id]["average_processing_time"]
 
             task_averages.append(data)

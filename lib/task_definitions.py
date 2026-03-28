@@ -46,3 +46,21 @@ task_parameters: dict[int, TaskParameters] = {
     TaskIDs.REMOVE_BACKGROUND: TaskParameters(cycles=2000568258, memory_mb=316),
 }
 
+task_names: dict[int, str] = {
+    TaskIDs.DETECT_HUMAN: "Detect Human",
+    TaskIDs.CLASSIFY_FRUIT: "Classify Fruit",
+    TaskIDs.COMPRESSION: "Compression",
+    TaskIDs.DECOMPRESSION: "Decompression",
+    TaskIDs.ENCRYPTION: "Encryption",
+    TaskIDs.DECRYPTION: "Decryption",
+    TaskIDs.BANANA_QUALITY_RATING: "Banana Quality Rating",
+    TaskIDs.ORANGE_QUALITY_RATING: "Orange Quality Rating",
+    TaskIDs.OBJECT_COUNT: "Object Count",
+    TaskIDs.BANANA_QUALITY_RIPENESS: "Banana Quality Ripeness",
+    TaskIDs.ORANGE_QUALITY_RIPENESS: "Orange Quality Ripeness",
+    TaskIDs.FRUIT_SIZE: "Fruit Size",
+    TaskIDs.FRUIT_DEFECTS: "Fruit Defects",
+    TaskIDs.FRUIT_QUALITY_AGGREGATION: "Fruit Quality Aggregation",
+    TaskIDs.OBJECT_COUNT: "Object Count",
+    TaskIDs.REMOVE_BACKGROUND: "Remove Background",
+}

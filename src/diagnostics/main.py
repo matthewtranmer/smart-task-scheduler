@@ -3,21 +3,24 @@ from flask import Flask, render_template
 from lib import net, edge_pb2
 
 app = Flask(__name__)
-access_server_address = ("10.45.1.34", 2004)
 
 @app.route("/")
 def index():
+    print("Index")
     data = gatherDiagnostics()
     return render_template("index.html", data=data)
 
 def gatherDiagnostics() -> dict:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(access_server_address)
+    print("Connected")
 
     header = net.createHeader(net.Commands.GATHER_DIAGNOSTICS)
     net.send(sock, header, b"")
+    print("Send")
 
     _, payload = net.recv(sock)
+    print("recv")
 
     sock.close()
 

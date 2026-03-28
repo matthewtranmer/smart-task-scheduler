@@ -3,6 +3,7 @@ os.environ["PYTHONPATH"] = "~/repos/smart-task-scheduler"
 
 import random, math, pprint, json
 from lib.task_definitions import TaskIDs
+import sys
 
 # Create a list of tasks execeuted in order
 # Each task must have a name, an ID, the time in which it will be
@@ -64,8 +65,6 @@ task_definitions = [
    }
 ]
 
-MULTIPLIER = 1
-
 def create_tasks(frequency_hz, task_definition, task_list, time):
     period = 1 / frequency_hz
     deadline_range_seconds = task_definition["deadline_range_seconds"]
@@ -88,111 +87,104 @@ def create_tasks(frequency_hz, task_definition, task_list, time):
 
         task_list.append(task_data)
 
-output_dataset = []
+def main(multipler, output_file_name):
+    output_dataset = []
 
+    # Iteration = 1 second
+    for time in range(120):
+        current_tasks = []    
 
-# Iteration = 1 second
-for time in range(120):
-    current_tasks = []    
+        for task_definition in task_definitions:
+            match task_definition["task_name"]:
+                case "human_detection":
+                    # 30% chance of being called
+                    if (random.uniform(0, 1) > 0.7):
+                        create_tasks(
+                            frequency_hz=int(30 * multipler),
+                            task_definition=task_definition,
+                            task_list=current_tasks,
+                            time=time
+                        )
 
-    for task_definition in task_definitions:
-        match task_definition["task_name"]:
-            case "human_detection":
-                # 30% chance of being called
-                if (random.uniform(0, 1) > 0.7):
+                case "classify_fruit":
+                    # Called between 20 and 30 times per second
+                    frequency_hz=random.randint(int(20 * multipler), int(30 * multipler))
+
                     create_tasks(
-                        frequency_hz=int(30 * MULTIPLIER),
+                        frequency_hz=frequency_hz,
                         task_definition=task_definition,
                         task_list=current_tasks,
                         time=time
                     )
 
-            case "classify_fruit":
-                # Called between 20 and 30 times per second
-                frequency_hz=random.randint(int(20 * MULTIPLIER), int(30 * MULTIPLIER))
+                    # banana_quality_rating
+                    create_tasks(
+                        frequency_hz=frequency_hz//2,
+                        task_definition=task_definitions[7],
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-                create_tasks(
-                    frequency_hz=frequency_hz,
-                    task_definition=task_definition,
-                    task_list=current_tasks,
-                    time=time
-                )
+                    # orange_quality_rating
+                    create_tasks(
+                        frequency_hz=frequency_hz//2,
+                        task_definition=task_definitions[8],
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-                # banana_quality_rating
-                create_tasks(
-                    frequency_hz=frequency_hz//2,
-                    task_definition=task_definitions[7],
-                    task_list=current_tasks,
-                    time=time
-                )
+                case "object_count":
+                    create_tasks(
+                        frequency_hz=random.randint(int(10 * multipler), int(20 * multipler)),
+                        task_definition=task_definition,
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-                # orange_quality_rating
-                create_tasks(
-                    frequency_hz=frequency_hz//2,
-                    task_definition=task_definitions[8],
-                    task_list=current_tasks,
-                    time=time
-                )
+                case "encryption":
+                    create_tasks(
+                        frequency_hz=int(10 * multipler),
+                        task_definition=task_definition,
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-            case "object_count":
-                create_tasks(
-                    frequency_hz=random.randint(int(10 * MULTIPLIER), int(20 * MULTIPLIER)),
-                    task_definition=task_definition,
-                    task_list=current_tasks,
-                    time=time
-                )
+                case "decryption":
+                    create_tasks(
+                        frequency_hz=int(10 * multipler),
+                        task_definition=task_definition,
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-            case "encryption":
-                create_tasks(
-                    frequency_hz=int(10 * MULTIPLIER),
-                    task_definition=task_definition,
-                    task_list=current_tasks,
-                    time=time
-                )
+                case "compression":
+                    create_tasks(
+                        frequency_hz=int(40 * multipler),
+                        task_definition=task_definition,
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-            case "decryption":
-                create_tasks(
-                    frequency_hz=int(10 * MULTIPLIER),
-                    task_definition=task_definition,
-                    task_list=current_tasks,
-                    time=time
-                )
+                case "decompression":
+                    create_tasks(
+                        frequency_hz=int(40 * multipler),
+                        task_definition=task_definition,
+                        task_list=current_tasks,
+                        time=time
+                    )
 
-            case "compression":
-                create_tasks(
-                    frequency_hz=int(40 * MULTIPLIER),
-                    task_definition=task_definition,
-                    task_list=current_tasks,
-                    time=time
-                )
+        current_tasks.sort(key=lambda x: x["start_time_seconds"])
 
-            case "decompression":
-                create_tasks(
-                    frequency_hz=int(40 * MULTIPLIER),
-                    task_definition=task_definition,
-                    task_list=current_tasks,
-                    time=time
-                )
-
-    current_tasks.sort(key=lambda x: x["start_time_seconds"])
-
-    for task in current_tasks:
-        output_dataset.append(task)
+        for task in current_tasks:
+            output_dataset.append(task)
 
 
-with open("other/dataset/normal.json", "w+") as file:
-    json.dump(output_dataset, file)
-                
-            
+    with open(f"other/dataset/{output_file_name}.json", "w+") as file:
+        json.dump(output_dataset, file)
 
+if __name__ == "__main__":
+    if len(sys.argv) > 2:
+        multiplier = float(sys.argv[1])
+        output_file_name = sys.argv[2]
 
-# Output
-# [
-#     {
-#         "task_name": "name",
-#         "task_id": 0,
-#         "start_time_seconds": 0.0,
-#         "deadline_seconds": 0.0,
-#         "input": "input" # Either string or file path
-#     }
-# ]
+    main(multiplier, output_file_name)

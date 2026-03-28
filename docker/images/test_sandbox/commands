@@ -9,3 +9,5 @@ sudo cpufreq-set -c 2 -g userspace
 sudo cpufreq-set -c 2 -f 3.4GHz
 
 watch -n 1 "cat /proc/cpuinfo | grep 'MHz'"
+
+echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost 
