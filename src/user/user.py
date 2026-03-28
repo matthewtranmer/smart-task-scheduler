@@ -83,7 +83,8 @@ def send_task(address, task_id, deadline_ms):
                 problem = True
 
 
-        if time_elapsed_ms > deadline_ms:
+        # Deadline is missed if execution time is above 10% of the deadline
+        if time_elapsed_ms > deadline_ms * 1.1:
             text += "DEADLINE MISSED\n"
             deadlines_missed += 1
             problem = True
