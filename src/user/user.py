@@ -73,19 +73,19 @@ def send_task(address, task_id, deadline_ms):
 
     with lock:
         problem = False
-        text = f"Task name {task_name}\nTime elapsed {time_elapsed_ms}ms\nDeadline {deadline_ms}ms\n"
+        text = f"Task name {task_name} Time elapsed {time_elapsed_ms}ms Deadline {deadline_ms}ms\n"
 
         if (not response.success):
             # Task dropped
             if (response.code == 551):
-                text += "TASK DROPPED\n"
+                text += "TASK DROPPED "
                 dropped_tasks += 1
                 problem = True
 
 
         # Deadline is missed if execution time is above 10% of the deadline
-        if time_elapsed_ms > deadline_ms * 1.1:
-            text += "DEADLINE MISSED\n"
+        if time_elapsed_ms > deadline_ms * 1.10:
+            text += "DEADLINE MISSED "
             deadlines_missed += 1
             problem = True
 

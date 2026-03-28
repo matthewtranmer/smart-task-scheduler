@@ -21,47 +21,47 @@ task_definitions = [
    {
        "task_name": "human_detection",
        "task_id": TaskIDs.DETECT_HUMAN,
-       "deadline_range_seconds": (0.3, 0.7),
+       "deadline_range_seconds": (0.5, 0.9),
    }, 
    {
        "task_name": "classify_fruit",
        "task_id": TaskIDs.CLASSIFY_FRUIT,
-       "deadline_range_seconds": (1, 2),
+       "deadline_range_seconds": (1.3, 2.5),
    },
    {
        "task_name": "object_count",
        "task_id": TaskIDs.OBJECT_COUNT,
-       "deadline_range_seconds": (0.4, 3.0),
+       "deadline_range_seconds": (0.8, 3.5),
    },
    {
        "task_name": "encryption",
        "task_id": TaskIDs.ENCRYPTION,
-       "deadline_range_seconds": (0.3, 3.0),
+       "deadline_range_seconds": (0.4, 3.5),
    },
    {
        "task_name": "decryption",
        "task_id": TaskIDs.DECRYPTION,
-       "deadline_range_seconds": (0.3, 3.0),
+       "deadline_range_seconds": (0.4, 3.5),
    },
    {
        "task_name": "compression",
        "task_id": TaskIDs.COMPRESSION,
-       "deadline_range_seconds": (0.2, 3.0),
+       "deadline_range_seconds": (0.5, 3.7),
    },
    {
        "task_name": "decompression",
        "task_id": TaskIDs.DECOMPRESSION,
-       "deadline_range_seconds": (0.2, 3.0),
+       "deadline_range_seconds": (0.5, 3.7),
    },
    {
        "task_name": "banana_quality_rating",
        "task_id": TaskIDs.BANANA_QUALITY_RATING,
-       "deadline_range_seconds": (0.9, 2.5),
+       "deadline_range_seconds": (1.5, 2.5),
    },
    {
        "task_name": "orange_quality_rating",
        "task_id": TaskIDs.ORANGE_QUALITY_RATING,
-       "deadline_range_seconds": (0.9, 2.5),
+       "deadline_range_seconds": (1.5, 2.5),
    }
 ]
 
