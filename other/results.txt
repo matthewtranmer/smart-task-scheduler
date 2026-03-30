@@ -32,7 +32,6 @@ Tasks failed: 27
 Tasks dropped: 27
 Deadlines missed: 0
 
-
 Medium (1)
 Tasks attempted: 8968
 Tasks failed: 1987
@@ -40,40 +39,42 @@ Tasks dropped: 1985
 Deadlines missed: 2
 
 High (1.5)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 13073
+Tasks failed: 4876
+Tasks dropped: 4872
+Deadlines missed: 4
 
 Very-High (2)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 17594
+Tasks failed: 8285
+Tasks dropped: 8283
+Deadlines missed: 2
 
 
 
 CLOUD ONLY:
 Low (0.5)
-Tasks attempted: 
-Tasks failed: 
-Dropped tasks: 
-Deadlines missed: 
+Tasks attempted: 4284
+Tasks failed: 1388
+Tasks dropped: 1313
+Deadlines missed: 75
+
 
 Medium (1)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 8968
+Tasks failed: 3062
+Tasks dropped: 2908
+Deadlines missed: 154
+
 
 High (1.5)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 13073
+Tasks failed: 4345
+Tasks dropped: 4116
+Deadlines missed: 229
 
 Very-High (2)
-Tasks attempted:
-Tasks failed:
-Dropped tasks:
-Deadlines missed:
+Tasks attempted: 17594
+Tasks failed: 6116
+Tasks dropped: 5740
+Deadlines missed: 376
