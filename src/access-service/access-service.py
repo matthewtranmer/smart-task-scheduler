@@ -61,9 +61,10 @@ class EdgeAccess:
     def __init__(
             self, 
             scheduler: s.Scheduler, 
-            queue_wait_time_s: int, 
+            queue_wait_time_s: int,
             logger: logging.Logger, 
             diagnostics, 
+            queue_enabled = True, 
             ip=None, 
             port=2004
         ):
@@ -74,6 +75,7 @@ class EdgeAccess:
         self.queue_wait_time_s = queue_wait_time_s
         self.logger = logger
         self.diagnostics = diagnostics
+        self.queue_enabled = queue_enabled
         self.port = port
 
         if ip != None:
@@ -188,7 +190,7 @@ class EdgeAccess:
             )
 
             # Test if the task can withstand being added to the queue
-            if self.can_add_to_queue(start_tasks[i]):
+            if self.queue_enabled and self.can_add_to_queue(start_tasks[i]):
                 self.logger.debug("Adding task to queue")
                 self.task_queue.add_task(task_info)
 
@@ -336,9 +338,9 @@ class EdgeAccess:
         for _ in range(3):
             # Schedule either an edge or cloud node.
             scheduled_node: s.ScheduledNode = self.scheduler.schedule(
-                task.deadline_ms / 1000,
-                task.cycles_required,
-                task.memory_requirement_mb
+                task_deadline_s=task.deadline_ms / 1000,
+                task_cycles_required=task.cycles_required,
+                task_memory_mb=task.memory_requirement_mb
             )
         
             try:
@@ -494,26 +496,31 @@ def main():
     # cloud_address = (cloud_ip, cloud_port)
     cloud_address = ("127.0.0.1", 16225)
     
-    scheduler = s.SchedulerV1(
-        logger=logger,
-        cloud_address=cloud_address,
-        cloud_clock_speed_cps=3.4*10**9, #3.4Ghz
-        cloud_RTT_latency_s=0.7,
-        load_factor_usage_threshold=1, # 0.6 CHANGE 
-        omega=0.01
+    # scheduler = s.SchedulerV1(
+    #     logger=logger,
+    #     cloud_address=cloud_address,
+    #     cloud_clock_speed_cps=3.4*10**9, #3.4Ghz
+    #     cloud_RTT_latency_s=0.7,
+    #     load_factor_usage_threshold=1, # 0.6 CHANGE 
+    #     omega=0.01
+    # )
+
+    rr_scheduler = s.RoundRobinEdgeCloud(
+        cloud_address=cloud_address
     )
     
     diagnostics = Diagnostics(
         measurement_interval_s=20,
-        scheduler=scheduler, 
+        scheduler=rr_scheduler, 
         display=False
     )
 
     access_server = EdgeAccess(
-        scheduler=scheduler,
+        scheduler=rr_scheduler,
         queue_wait_time_s=0.3,
         logger= logger,
-        diagnostics=diagnostics
+        diagnostics=diagnostics,
+        queue_enabled=False
     )
 
     access_server.serve()    

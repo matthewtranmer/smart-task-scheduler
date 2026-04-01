@@ -227,11 +227,11 @@ class RoundRobinEdgeCloud(RoundRobinWithAllocation):
         super().__init__()
         self.cloud_address = cloud_address
 
-    def schedule(self, memory_mb):
+    def schedule(self, task_memory_mb, **kwargs):
         try:
-            return super().schedule(memory_mb)
+            return super().schedule(task_memory_mb)
         except (NoNodesExeception, NodeResourceExecpetion) as e:
-            return ScheduledNode(self.cloud_address, NodeType.CLOUD, memory_mb)
+            return ScheduledNode(self.cloud_address, NodeType.CLOUD, task_memory_mb)
         
     def resetNode(self, scheduledNode, processing_time_ms):
         if (scheduledNode.node_type == NodeType.EDGE):
@@ -290,7 +290,7 @@ class SchedulerV1(Scheduler):
 
         return (best_node, top_score)
 
-    def schedule(self, task_deadline_s, task_cycles_required, task_memory_mb) -> ScheduledNode:
+    def schedule(self, task_memory_mb, task_deadline_s, task_cycles_required) -> ScheduledNode:
         with self.lock:
 
             load_factor = self._calculate_load_factor()
