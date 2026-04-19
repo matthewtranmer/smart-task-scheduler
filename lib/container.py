@@ -21,7 +21,7 @@ class InternalContainerError(Exception):
     def __str__(self):
         return f"{self.message}"
 
-
+# Represents a container running on a local node
 class Container:
     client = docker.from_env()
 
@@ -60,6 +60,7 @@ class Container:
             memswap_limit=memory_bytes
         )
 
+    # Executes a task on the container
     def executeTask(self, task: edge_pb2.Task) -> edge_pb2.ContainerResponse:
         # Convert task into a JSON string to give to the container
         # container_params = {"id": task.taskID, "params": task.input.decode(), "inputID": task.inputID}
@@ -87,12 +88,14 @@ class Container:
 
         return response
     
+    # Creates a socket for communication
     def create_socket(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(("127.0.0.1", self.port))
 
         print("created socket")
 
+    # Send data to the container
     def send(self, data: bytes):
         if self.sock == None:
             self.create_socket()
@@ -140,6 +143,7 @@ class Container:
     def __exit__(self, exc_type, exc_value, traceback):
         self.kill()
 
+# Wrapper class for a container held within a pool
 class PoolContainer():
     pool = None
     container = None
@@ -157,6 +161,7 @@ class PoolContainer():
     def __exit__(self, exc_type, exc_value, traceback):
         self.pool.releaseContainer(self)
     
+# A pool of containers
 class ContainerPool:
     containers: list[Container] = []
     max_container_count = 0
@@ -246,6 +251,7 @@ class ContainerPool:
         for cont in self.containers:
             cont.kill()
 
+# A container pool with a set number of containers
 class StaticContainerPool(ContainerPool):
     def __init__(self, image, cpu_ids):
         self.image = image

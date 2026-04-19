@@ -21,7 +21,7 @@ class TaskInformation:
     task_graph: dagtask.TaskDependencyGraph
     graph_node_id: int
 
-
+# Priority queue which holds non-tight tasks, ordered by deadline
 class PriorityTaskQueue:
     def __init__(self):
         self.queue: list[TaskInformation] = []

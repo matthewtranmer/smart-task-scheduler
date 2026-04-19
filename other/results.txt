@@ -78,3 +78,33 @@ Tasks attempted: 17594
 Tasks failed: 6116
 Tasks dropped: 5740
 Deadlines missed: 376
+
+
+
+
+ROUND ROBIN:
+Low (0.5)
+Tasks attempted: 4284
+Tasks failed: 16
+Tasks dropped: 11
+Deadlines missed: 5
+
+
+Medium (1)
+Tasks attempted: 8968
+Tasks failed: 357
+Tasks dropped: 270
+Deadlines missed: 90
+
+
+High (1.5)
+Tasks attempted: 13073
+Tasks failed: 1379
+Tasks dropped: 1096
+Deadlines missed: 285
+
+Very-High (2)
+Tasks attempted: 17594
+Tasks failed: 2759
+Tasks dropped: 2146
+Deadlines missed: 617

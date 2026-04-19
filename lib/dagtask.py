@@ -2,6 +2,7 @@ import random, json, base64, math
 from lib import edge_pb2, task_definitions
 from collections import deque
 
+# A node within the DAG graph
 class DAGNode():
     node_id: int
     task_id: int
@@ -22,8 +23,7 @@ class DAGNode():
 
         self.node_id = random.randint(1, 999999999999999999999999999999)
 
-# TODO: Make threadsafe
-# Need to have client socket to respond
+# Graph definition for DAG tasks
 class TaskDependencyGraph():
     START_NODE_ID = 0
     END_NODE_ID = -1

@@ -8,6 +8,7 @@ def decode_binary(binary_in: str) -> bytes:
 def encode_binary(binary_in: bytes) -> str:
     return base64.encodebytes(binary_in).decode()
 
+# Class that handles offloading user tasks to the access service
 class TaskOffloader:
     def __init__(self, access_server_addr):
         self.access_server_addr = access_server_addr

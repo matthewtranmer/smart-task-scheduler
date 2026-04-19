@@ -52,6 +52,7 @@ def getPhysicalCpuIds():
 def getSystemMemoryMB():
     return psutil.virtual_memory().total // 1024 // 1024
 
+# Returns the max clock speed in cycles per seconds
 def getClockSpeedCPS():
     max_frequency = psutil.cpu_freq().max
     

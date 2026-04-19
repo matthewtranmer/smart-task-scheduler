@@ -1,6 +1,7 @@
 from multiprocessing import Lock
 import logging
 
+# No nodes available to schedule to
 class NoNodesExeception(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -9,6 +10,7 @@ class NoNodesExeception(Exception):
     def __str__(self):
         return f"{self.message}"
     
+# No nodes with available resources
 class NodeResourceExecpetion(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -17,6 +19,7 @@ class NodeResourceExecpetion(Exception):
     def __str__(self):
         return f"{self.message}"
     
+# Task has been dropped
 class TaskDroppedExeception(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -25,23 +28,25 @@ class TaskDroppedExeception(Exception):
     def __str__(self):
         return f"{self.message}"
     
+# Enum describing the type of the scheduled node
 class NodeType:
     EDGE = 0
     CLOUD = 1
 
+# Defines a node that can be scheduled
 class ScheduledNode:
     def __init__(self, address: tuple[str, int], node_type: int, memory_mb=None):
         self.address = address
         self.node_type = node_type
         self.memory_mb = memory_mb
 
+# Scheuduler base class
 class Scheduler:
     def __init__(self):
         self.index = 0
         self.nodes = []
         self.next_id = 0
     
-
     def schedule(self) -> ScheduledNode:
         raise NotImplementedError
     
@@ -55,14 +60,19 @@ class Scheduler:
 
         return minimum
     
+    # Calculate the expected processing time for a program cycles_required cycles running on a CPU
+    # of clock speed clock_speed
     def calculate_processing_time(self, clock_speed, cycles_required):
         return cycles_required / clock_speed
     
+    # Calculate the processing time and latency for a program with cycles_required cycles running
+    # on the cloud
     def calculate_cloud_processing_time(self, cycles_required):
         processing_time = self.calculate_processing_time(self.cloud_clock_speed_cps, cycles_required)
         
         return processing_time + self.cloud_RTT_latency_s
     
+    # Calculate the resource useage for each node for use with the diagnostic service
     def calculateResourceUsage(self, sample_time_s) -> list:
         for node in self.nodes:
             cpu_time_per_second = node["cpu_time_ms"] // sample_time_s
@@ -74,6 +84,7 @@ class Scheduler:
             node["cpu_time_ms"] = 0
             node["cpu_usage"] = cpu_usage_percent
 
+    # Free the resources held by a task on an edge node
     def resetNode(self, scheduledNode: ScheduledNode, processing_time_ms) -> bool:
         if scheduledNode.node_type == NodeType.CLOUD:
             return True
@@ -132,6 +143,7 @@ class Scheduler:
         index = self._findNodeIndex(address)
         self.nodes[index]["timed_out"] = False
 
+    # Remove a node from the registry
     def removeNode(self, scheduled_node: ScheduledNode) -> bool:
         if (scheduled_node.node_type == NodeType.CLOUD):
             return
@@ -169,6 +181,7 @@ class Scheduler:
         index = self._findNodeIndex(address)
         return self.nodes[index]["id"]
     
+# Basic round robin scheduling algortihm used on edge nodes only
 class RoundRobinWithAllocation(Scheduler):
     def schedule(self, memory_mb) -> ScheduledNode:
         if (len(self.nodes) <= 0):
@@ -237,10 +250,7 @@ class RoundRobinEdgeCloud(RoundRobinWithAllocation):
         if (scheduledNode.node_type == NodeType.EDGE):
             super().resetNode(scheduledNode, processing_time_ms)
 
-
-#TODO:  CPUs available is becoming -1?????????????????/
-
-# TODO: not thread safe
+# Implementation of WOBS algorithm
 class SchedulerV1(Scheduler):
     lock = Lock()
 
@@ -264,6 +274,7 @@ class SchedulerV1(Scheduler):
         self.load_factor_usage_threshold: float = load_factor_usage_threshold
         self.omega: float = omega
 
+    # Find the edge node with the highest score 
     def _get_best_node(self, task_deadline_s, task_cycles_required, task_memory_mb) -> tuple[dict, int]:
         best_node = None
         top_score = 0
@@ -278,18 +289,13 @@ class SchedulerV1(Scheduler):
                 task_memory_mb
             )
 
-            # self.logger.debug(f"Node {count} got score {node_score}")
-            # self.logger.debug(f"Node {count} CPUs available {node["cpus_available"]}")
-            
-
-            # count += 1
-
             if (node_score > top_score):
                 top_score = node_score
                 best_node = node
 
         return (best_node, top_score)
 
+    # Main scheduling logic - takes in task parameters and returns a scheduled node
     def schedule(self, task_memory_mb, task_deadline_s, task_cycles_required) -> ScheduledNode:
         with self.lock:
 
@@ -316,8 +322,6 @@ class SchedulerV1(Scheduler):
                 task_memory_mb
             )
 
-            # print(top_score)
-
             # No edge nodes available to process task
             if (top_score == 0):
                 print(f"Nodes detected {len(self.nodes)}")
@@ -342,6 +346,7 @@ class SchedulerV1(Scheduler):
             # Schedule to edge node with highest score
             return ScheduledNode(best_node["address"], NodeType.EDGE, task_memory_mb)
 
+    # Implements the score equation
     def _score_node(self, node, task_deadline_s, task_cycles_required, task_memory_mb) -> int:
         memory_available: int = node["memory_available"]
         cpus_available: int = node["cpus_available"]

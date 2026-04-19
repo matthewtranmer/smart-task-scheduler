@@ -7,12 +7,14 @@ class Commands():
     REGISTRATION = 3
     GATHER_DIAGNOSTICS = 4
 
+# Create a header needed for sending requests
 def createHeader(commandID):
     header = edge_pb2.Header()
     header.commandID = commandID
 
     return header
 
+# Helper function to create responses
 def createResponse(success: bool, value: bytes, response_code = 200) -> edge_pb2.Response:
     response = edge_pb2.Response()
     response.success = success
@@ -21,6 +23,7 @@ def createResponse(success: bool, value: bytes, response_code = 200) -> edge_pb2
 
     return response
 
+# Helper function to create tasks
 def createTask(taskID: int, input: bytes, memory_requirement_mb: int, deadline_ms: int, inputID: int):
     task = edge_pb2.Task()
     task.taskID = taskID
@@ -31,6 +34,7 @@ def createTask(taskID: int, input: bytes, memory_requirement_mb: int, deadline_m
 
     return task
 
+# Send data through a socket
 def send(sock, header: edge_pb2.Header, data: bytes):
     header.messageLength = len(data)
 
@@ -39,6 +43,7 @@ def send(sock, header: edge_pb2.Header, data: bytes):
     
     sock.sendall(header_length + header_bytes + data)
 
+# Reveive data through a socket
 def recv(sock) -> tuple[edge_pb2.Header, bytes]: 
     header_length_bytes = sock.recv(4)
     header_length = int.from_bytes(header_length_bytes, byteorder="little", signed=False)

@@ -1,6 +1,7 @@
 from lib import dagtask as d
 from lib.task_definitions import TaskIDs
 
+# Create the DAG graph required for the BananaQualityRating task
 class BananaQualityRating(d.TaskDependencyGraph):
     def __init__(self, deadline_s: float):
         super().__init__(deadline_s)
@@ -27,6 +28,7 @@ class BananaQualityRating(d.TaskDependencyGraph):
 
         self.add_link(-1, self.quality_aggregation_id)
 
+# Create the DAG graph required for the OrangeQualityRating task
 class OrangeQualityRating(d.TaskDependencyGraph):
     def __init__(self, deadline_s: float):
         super().__init__(deadline_s)
