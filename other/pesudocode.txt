@@ -1,0 +1,29 @@
+// Task Ingress Function
+1 - Task is receivied
+2 - Calculate the maximum possible execution time for the task
+    using the slowest edge node
+3 - Calculate the effective_execution_time = execution_time + queue_wait_time
+4 - If this time is greater than the deadline, the task cannot
+    withstand being added to the queue, so send straight to the scheduler
+5 - If the time is less than the deadline, add the tasks to the task queue,
+    sorted by deadline
+
+
+
+// Task Scheduling Function
+1 - Get priority task or next task from queue
+2 - If load_factor is greater than threshold - attempt to schedule to the cloud:
+        Task can be scheudled to the cloud if the deadline is less than the 
+        calculated cloud processing time + cloud_RTT_latency_s
+3 - Score each node using the scoring formula
+4 - Schedule to node with the largest score
+5 - If the largest score is 0:
+        Attempt to schedule to cloud
+        If node cannot be executed on cloud - drop task
+
+
+
+
+
+
+problem - ordered by deadline not relative tightness
