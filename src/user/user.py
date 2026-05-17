@@ -143,6 +143,10 @@ def main(address, task_dataset_file_path):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print("Usage: [AS_ADDRESS]:[AS_PORT] [DATASET_PATH]")
+        os._exit(-1)
+
     address = None
     threads = 1
 

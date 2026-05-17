@@ -207,6 +207,11 @@ def main(address, cpus, memory):
     edge_client.serve("task_sandbox", timeout=5)
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print("Usage: [AS_ADDRESS]:[AS_PORT] [CPUs] [MEMORY(MB)]")
+        os._exit(-1)
+
+
     address = None
     if len(sys.argv) > 1:
         address = sys.argv[1]
